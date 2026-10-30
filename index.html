@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS Widget / Desktop</title>
+  <link rel="stylesheet" href="cs-widget.css">
+  <style>
+    body { margin: 0; padding: 40px; background: #111214; font-family: "Gilroy", system-ui, sans-serif; color: #e6e8ee; }
+    .demo { width: 1000px; transition: width 0.3s ease; }
+
+    /* Demo controls (page chrome, not part of the widget) */
+    .demo-controls {
+      display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center;
+      width: max-content; max-width: 100%; margin-bottom: 20px; padding: 12px 16px;
+      border: 1px solid #262b3a; border-radius: 12px; background: #181b25;
+    }
+    .demo-group { display: flex; gap: 8px; align-items: center; }
+    .demo-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8a91a5; }
+    .demo-seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid #262b3a; border-radius: 9px; background: #10131b; }
+    .demo-seg button, .demo-btn {
+      padding: 6px 10px; border: 0; border-radius: 6px; background: transparent;
+      font: 500 13px/16px inherit; font-family: inherit; color: #8a91a5; cursor: pointer;
+    }
+    .demo-seg button:hover, .demo-btn:hover { color: #fff; }
+    .demo-seg button[aria-pressed="true"] { background: #2a3350; color: #fff; }
+    .demo-btn { border: 1px solid #262b3a; background: #1f2433; color: #e6e8ee; }
+    .demo-btn:hover { background: #283047; }
+    .demo-seg button:focus-visible, .demo-btn:focus-visible { outline: 2px solid #5c9eff; outline-offset: 2px; }
+    /* Live line: what is being played right now */
+    .demo-now {
+      flex-basis: 100%; margin: 0; padding-top: 10px; border-top: 1px solid #262b3a;
+      font-size: 13px; line-height: 18px; color: #8a91a5; font-variant-numeric: tabular-nums;
+    }
+    .demo-now b { color: #fff; font-weight: 700; }
+    .demo-now .is-scenario { color: #ffba33; }
+    #demo-scenarios button[aria-pressed="true"] { background: #ffba33; color: #10131b; }
+  </style>
+</head>
+<body>
+  <section class="demo-controls" aria-label="Управление виджетом">
+    <div class="demo-group">
+      <span class="demo-label">Трансляция</span>
+      <div class="demo-seg" role="group" aria-label="Трансляция">
+        <button type="button" data-stream="on" aria-pressed="true">Вкл</button>
+        <button type="button" data-stream="off" aria-pressed="false">Выкл</button>
+      </div>
+    </div>
+    <div class="demo-group">
+      <span class="demo-label">Симуляция</span>
+      <div class="demo-seg" role="group" aria-label="Симуляция">
+        <button type="button" data-sim="on" aria-pressed="true">Идёт</button>
+        <button type="button" data-sim="off" aria-pressed="false">Пауза</button>
+      </div>
+      <div class="demo-seg" role="group" aria-label="Скорость симуляции">
+        <button type="button" data-speed="1" aria-pressed="true">1×</button>
+        <button type="button" data-speed="2" aria-pressed="false">2×</button>
+        <button type="button" data-speed="4" aria-pressed="false">4×</button>
+      </div>
+    </div>
+    <div class="demo-group">
+      <span class="demo-label">Статус</span>
+      <div class="demo-seg" role="group" aria-label="Статус раунда" id="demo-status"></div>
+    </div>
+    <div class="demo-group">
+      <span class="demo-label">Ситуации</span>
+      <div class="demo-seg" role="group" aria-label="Игровые ситуации" id="demo-scenarios"></div>
+    </div>
+    <p class="demo-now" id="demo-now" aria-live="polite"></p>
+    <div class="demo-group">
+      <span class="demo-label">Счёт</span>
+      <div class="demo-seg" role="group" aria-label="Счёт NAVI">
+        <button type="button" data-score="ct:-1" aria-label="NAVI минус раунд">NAVI −</button>
+        <button type="button" data-score="ct:1" aria-label="NAVI плюс раунд">+</button>
+      </div>
+      <div class="demo-seg" role="group" aria-label="Счёт ENCE">
+        <button type="button" data-score="t:-1" aria-label="ENCE минус раунд">ENCE −</button>
+        <button type="button" data-score="t:1" aria-label="ENCE плюс раунд">+</button>
+      </div>
+    </div>
+    <div class="demo-group">
+      <span class="demo-label">Фон</span>
+      <div class="demo-seg" role="group" aria-label="Фон виджета">
+        <button type="button" data-bg="assets/bg-map.png" aria-pressed="true">Anubis</button>
+        <button type="button" data-bg="assets/bg-inferno.jpg" aria-pressed="false">Inferno</button>
+        <button type="button" data-bg="assets/bg-nuke.jpg" aria-pressed="false">Nuke</button>
+        <button type="button" data-bg="none" aria-pressed="false">Без арта</button>
+      </div>
+    </div>
+    <div class="demo-group">
+      <span class="demo-label">Команды</span>
+      <div class="demo-seg" role="group" aria-label="Положение команд">
+        <button type="button" data-teams="edges" aria-pressed="true">По краям</button>
+        <button type="button" data-teams="inner" aria-pressed="false">К счёту</button>
+      </div>
+    </div>
+    <div class="demo-group">
+      <span class="demo-label">Шапка</span>
+      <div class="demo-seg" role="group" aria-label="Размер шапки">
+        <button type="button" data-headsize="l" aria-pressed="true">Как есть</button>
+        <button type="button" data-headsize="m" aria-pressed="false">Меньше</button>
+        <button type="button" data-headsize="s" aria-pressed="false">Компакт</button>
+      </div>
+    </div>
+    <div class="demo-group">
+      <span class="demo-label">Ширина</span>
+      <div class="demo-seg" role="group" aria-label="Ширина виджета">
+        <button type="button" data-width="375" aria-pressed="false">375</button>
+        <button type="button" data-width="414" aria-pressed="false">414</button>
+        <button type="button" data-width="720" aria-pressed="false">720</button>
+        <button type="button" data-width="860" aria-pressed="false">860</button>
+        <button type="button" data-width="1000" aria-pressed="true">1000</button>
+        <button type="button" data-width="1200" aria-pressed="false">1200</button>
+      </div>
+    </div>
+    <div class="demo-group">
+      <button type="button" class="demo-btn" id="demo-kill">+ Фраг</button>
+      <button type="button" class="demo-btn" id="demo-reset">Сброс</button>
+    </div>
+  </section>
+
+  <div class="demo">
+    <article class="cs-widget" aria-label="Natus Vincere — ENCE">
+      <div class="cs-content">
+
+        <div class="cs-top">
+          <div class="cs-nav">
+            <button type="button" class="cs-back" aria-label="Назад" title="Назад"><span class="cs-back__icon"></span></button>
+            <nav class="cs-crumbs" aria-label="Навигация">
+              <ol>
+                <li><a href="#">CS2</a></li>
+                <li><a href="#" aria-current="page">CCT Eu 2026 Series #12</a></li>
+              </ol>
+            </nav>
+          </div>
+          <div class="cs-killfeed-list" id="cs-killfeed" aria-label="Килл-фид" aria-live="polite"></div>
+          <div class="cs-views" role="tablist" aria-label="Что показывать">
+            <button type="button" class="cs-views__tab cs-views__tab--stream" role="tab" data-view="stream" aria-selected="true" aria-label="Трансляция" title="Трансляция"><span class="cs-views__icon"></span></button>
+            <button type="button" class="cs-views__tab cs-views__tab--players" role="tab" data-view="players" aria-selected="false" tabindex="-1" aria-label="Составы" title="Составы"><span class="cs-views__icon"></span></button>
+            <button type="button" class="cs-views__tab cs-views__tab--live" role="tab" data-view="live" aria-selected="false" tabindex="-1" aria-label="Live-статистика" title="Live-статистика"><span class="cs-views__icon"></span></button>
+            <button type="button" class="cs-views__tab cs-views__tab--center" role="tab" data-view="center" aria-selected="false" tabindex="-1" aria-label="Матч-центр" title="Матч-центр"><span class="cs-views__icon"></span></button>
+          </div>
+        </div>
+
+        <div class="cs-main">
+          <div class="cs-team cs-team--left">
+            <div class="cs-logo">
+              <div class="cs-logo__img cs-logo__img--navi"><img src="assets/logo-navi.png" alt="NAVI"></div>
+            </div>
+            <div class="cs-team__info">
+              <p class="cs-team__name">Natus Vincere</p>
+              <div class="cs-team__meta">
+                <img class="cs-team__rank" src="assets/rank-ct.svg" alt="">
+                <p class="cs-team__hltv">HLTV: 4</p>
+                <div class="cs-chip cs-money cs-money--ct" title="Деньги команды">
+                  <img class="cs-money__icon" src="assets/dollar.svg" alt="">
+                  <p class="cs-chip-text">24.3K</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cs-center">
+            <div class="cs-score" role="group" aria-label="Счёт текущей карты 3:4, по картам 1:0">
+              <div class="cs-series cs-series--left" aria-hidden="true">
+                <span class="cs-series__pip cs-series__pip--won"></span>
+                <span class="cs-series__pip"></span>
+              </div>
+              <div class="cs-score__box"><p class="cs-score__value">3</p></div>
+              <p class="cs-score__colon">:</p>
+              <div class="cs-score__box"><p class="cs-score__value">4</p></div>
+              <div class="cs-series cs-series--right" aria-hidden="true">
+                <span class="cs-series__pip"></span>
+                <span class="cs-series__pip"></span>
+              </div>
+            </div>
+            <div class="cs-chip cs-status">
+              <img class="cs-status__icon" src="assets/status-timer.svg" alt="">
+              <p class="cs-chip-text">00:33</p>
+            </div>
+          </div>
+
+          <div class="cs-team cs-team--right">
+            <div class="cs-team__info">
+              <p class="cs-team__name">ENCE</p>
+              <div class="cs-team__meta">
+                <div class="cs-chip cs-money cs-money--t" title="Деньги команды">
+                  <img class="cs-money__icon" src="assets/dollar.svg" alt="">
+                  <p class="cs-chip-text">29.9K</p>
+                </div>
+                <p class="cs-team__hltv">HLTV: 12</p>
+                <img class="cs-team__rank" src="assets/rank-t.svg" alt="">
+              </div>
+            </div>
+            <div class="cs-logo">
+              <div class="cs-logo__img cs-logo__img--ence"><img src="assets/logo-ence.png" alt="ENCE"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cs-maps">
+          <div class="cs-maps__scores">
+            <div class="cs-chip cs-mapscore cs-mapscore--played" aria-label="Nuke: победа NAVI 13:9">
+              <span class="cs-mapscore__winner"><img src="assets/logo-navi.png" alt=""></span>
+              <p class="cs-chip-text cs-mapscore__name">Nuke</p>
+              <p class="cs-chip-text">13</p><span class="cs-mapscore__separator"></span><p class="cs-chip-text cs-mapscore__lose">9</p>
+            </div>
+            <div class="cs-chip cs-mapscore cs-mapscore--live" aria-current="true" aria-label="Anubis: идёт сейчас, 3:4">
+              <span class="cs-mapscore__live"></span>
+              <p class="cs-chip-text cs-mapscore__name">Anubis</p>
+              <p class="cs-chip-text">3</p><span class="cs-mapscore__separator"></span><p class="cs-chip-text">4</p>
+            </div>
+            <div class="cs-chip cs-mapscore cs-mapscore--upcoming" aria-label="Ancient: впереди">
+              <p class="cs-chip-text cs-mapscore__name">Ancient</p>
+            </div>
+          </div>
+          <p class="cs-maps__format">BO3 · Финал</p>
+        </div>
+
+        <div class="cs-rosters">
+          <div class="cs-roster">
+            <div class="cs-player cs-player--left" style="--hp: 100%">
+              <div class="cs-player__main">
+                <div class="cs-player__hp" aria-label="HP 100"><span class="cs-player__hp-fill"></span><p class="cs-player__name">b1t</p><p class="cs-player__hp-value">100</p></div>
+                <div class="cs-player__stats"><p class="cs-player__kd" aria-label="Убийства 14, смерти 12"><i class="cs-player__kd-icon cs-player__kd-icon--kills"></i>14<i class="cs-player__kd-icon cs-player__kd-icon--deaths"></i>12</p><i class="cs-player__weapon" aria-hidden="true"></i></div>
+              </div>
+            </div>
+            <div class="cs-player cs-player--left" style="--hp: 64%">
+              <div class="cs-player__main">
+                <div class="cs-player__hp" aria-label="HP 64"><span class="cs-player__hp-fill"></span><p class="cs-player__name">iM</p><p class="cs-player__hp-value">64</p></div>
+                <div class="cs-player__stats"><p class="cs-player__kd" aria-label="Убийства 17, смерти 13"><i class="cs-player__kd-icon cs-player__kd-icon--kills"></i>17<i class="cs-player__kd-icon cs-player__kd-icon--deaths"></i>13</p><i class="cs-player__weapon" aria-hidden="true"></i></div>
+              </div>
+            </div>
+            <div class="cs-player cs-player--left" style="--hp: 100%">
+              <div class="cs-player__main">
+                <div class="cs-player__hp" aria-label="HP 100"><span class="cs-player__hp-fill"></span><p class="cs-player__name">jL</p><p class="cs-player__hp-value">100</p></div>
+                <div class="cs-player__stats"><p class="cs-player__kd" aria-label="Убийства 19, смерти 11"><i class="cs-player__kd-icon cs-player__kd-icon--kills"></i>19<i class="cs-player__kd-icon cs-player__kd-icon--deaths"></i>11</p><i class="cs-player__weapon" aria-hidden="true"></i></div>
+              </div>
+            </div>
+            <div class="cs-player cs-player--left cs-player--killed" style="--hp: 0%">
+              <div class="cs-player__main">
+                <div class="cs-player__hp" aria-label="HP 0"><span class="cs-player__hp-fill"></span><p class="cs-player__name">Aleksib</p><p class="cs-player__hp-value">0</p></div>
+                <div class="cs-player__stats"><p class="cs-player__kd" aria-label="Убийства 9, смерти 15"><i class="cs-player__kd-icon cs-player__kd-icon--kills"></i>9<i class="cs-player__kd-icon cs-player__kd-icon--deaths"></i>15</p><i class="cs-player__weapon" aria-hidden="true"></i></div>
+              </div>
+            </div>
+            <div class="cs-player cs-player--left" style="--hp: 32%">
+              <div class="cs-player__main">
+                <div class="cs-player__hp" aria-label="HP 32"><span class="cs-player__hp-fill"></span><p class="cs-player__name">w0nderful</p><p class="cs-player__hp-value">32</p></div>
+                <div class="cs-player__stats"><p class="cs-player__kd" aria-label="Убийства 21, смерти 10"><i class="cs-player__kd-icon cs-player__kd-icon--kills"></i>21<i class="cs-player__kd-icon cs-player__kd-icon--deaths"></i>10</p><i class="cs-player__weapon" aria-hidden="true"></i></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cs-stream" id="cs-stream" data-src="assets/stream-cs2-trailer.mp4">
+            <div class="cs-chip cs-stream__source"><p class="cs-chip-text">Трансляция · Twitch</p></div>
+            <button type="button" class="cs-stream__play" aria-label="Смотреть трансляцию"><span class="cs-stream__play-icon"></span></button>
+            <section class="cs-embed cs-embed--live" data-view="live" role="tabpanel" aria-label="Live-статистика" hidden>
+              <header class="cs-embed__head"><span class="cs-embed__icon"></span><p class="cs-embed__title">Live-статистика</p><p class="cs-embed__vendor">сторонний виджет</p></header>
+              <div class="cs-embed__body" aria-hidden="true">
+                <span style="--w: 92%"></span><span style="--w: 64%"></span><span style="--w: 80%"></span>
+                <span style="--w: 48%"></span><span style="--w: 72%"></span><span style="--w: 56%"></span>
+              </div>
+              <p class="cs-embed__note">Здесь встраивается виджет поставщика</p>
+            </section>
+            <section class="cs-embed cs-embed--center" data-view="center" role="tabpanel" aria-label="Матч-центр" hidden>
+              <header class="cs-embed__head"><span class="cs-embed__icon"></span><p class="cs-embed__title">Матч-центр</p><p class="cs-embed__vendor">сторонний виджет</p></header>
+              <div class="cs-embed__body" aria-hidden="true">
+                <span style="--w: 92%"></span><span style="--w: 64%"></span><span style="--w: 80%"></span>
+                <span style="--w: 48%"></span><span style="--w: 72%"></span><span style="--w: 56%"></span>
+              </div>
+              <p class="cs-embed__note">Здесь встраивается виджет поставщика</p>
+            </section>
+          </div>
+
+          <div class="cs-roster">
+            <div class="cs-player cs-player--right" style="--hp: 88%">
+              <div class="cs-player__main">
+                <div class="cs-player__hp" aria-label="HP 88"><span class="cs-player__hp-fill"></span><p class="cs-player__name">Snappi</p><p class="cs-player__hp-value">88</p></div>
+                <div class="cs-player__stats"><p class="cs-player__kd" aria-label="Убийства 11, смерти 16"><i class="cs-player__kd-icon cs-player__kd-icon--kills"></i>11<i class="cs-player__kd-icon cs-player__kd-icon--deaths"></i>16</p><i class="cs-player__weapon" aria-hidden="true"></i></div>
+              </div>
+            </div>
+            <div class="cs-player cs-player--right cs-player--killed" style="--hp: 0%">
+              <div class="cs-player__main">
+                <div class="cs-player__hp" aria-label="HP 0"><span class="cs-player__hp-fill"></span><p class="cs-player__name">dycha</p><p class="cs-player__hp-value">0</p></div>
+                <div class="cs-player__stats"><p class="cs-player__kd" aria-label="Убийства 15, смерти 14"><i class="cs-player__kd-icon cs-player__kd-icon--kills"></i>15<i class="cs-player__kd-icon cs-player__kd-icon--deaths"></i>14</p><i class="cs-player__weapon" aria-hidden="true"></i></div>
+              </div>
+            </div>
+            <div class="cs-player cs-player--right" style="--hp: 100%">
+              <div class="cs-player__main">
+                <div class="cs-player__hp" aria-label="HP 100"><span class="cs-player__hp-fill"></span><p class="cs-player__name">hades</p><p class="cs-player__hp-value">100</p></div>
+                <div class="cs-player__stats"><p class="cs-player__kd" aria-label="Убийства 16, смерти 15"><i class="cs-player__kd-icon cs-player__kd-icon--kills"></i>16<i class="cs-player__kd-icon cs-player__kd-icon--deaths"></i>15</p><i class="cs-player__weapon" aria-hidden="true"></i></div>
+              </div>
+            </div>
+            <div class="cs-player cs-player--right" style="--hp: 45%">
+              <div class="cs-player__main">
+                <div class="cs-player__hp" aria-label="HP 45"><span class="cs-player__hp-fill"></span><p class="cs-player__name">sdy</p><p class="cs-player__hp-value">45</p></div>
+                <div class="cs-player__stats"><p class="cs-player__kd" aria-label="Убийства 13, смерти 17"><i class="cs-player__kd-icon cs-player__kd-icon--kills"></i>13<i class="cs-player__kd-icon cs-player__kd-icon--deaths"></i>17</p><i class="cs-player__weapon" aria-hidden="true"></i></div>
+              </div>
+            </div>
+            <div class="cs-player cs-player--right" style="--hp: 100%">
+              <div class="cs-player__main">
+                <div class="cs-player__hp" aria-label="HP 100"><span class="cs-player__hp-fill"></span><p class="cs-player__name">Spinx</p><p class="cs-player__hp-value">100</p></div>
+                <div class="cs-player__stats"><p class="cs-player__kd" aria-label="Убийства 18, смерти 16"><i class="cs-player__kd-icon cs-player__kd-icon--kills"></i>18<i class="cs-player__kd-icon cs-player__kd-icon--deaths"></i>16</p><i class="cs-player__weapon" aria-hidden="true"></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="cs-rounds">
+        <div class="cs-round cs-round--t"><img class="cs-round__icon" src="assets/round-elimination.svg" alt=""></div>
+        <div class="cs-round cs-round--ct"><img class="cs-round__icon" src="assets/round-bomb.svg" alt=""></div>
+        <div class="cs-round cs-round--t"><img class="cs-round__icon" src="assets/round-defuse.svg" alt=""></div>
+        <div class="cs-round cs-round--t"><img class="cs-round__icon" src="assets/round-elimination.svg" alt=""></div>
+        <div class="cs-round cs-round--ct"><img class="cs-round__icon" src="assets/round-bomb.svg" alt=""></div>
+        <div class="cs-round cs-round--ct"><img class="cs-round__icon" src="assets/round-elimination.svg" alt=""></div>
+        <div class="cs-round cs-round--t"><img class="cs-round__icon" src="assets/round-clock.svg" alt=""></div>
+        <div class="cs-round cs-round--ongoing"><p class="cs-round__number">8</p></div>
+        <div class="cs-round"><p class="cs-round__number">9</p></div>
+        <div class="cs-round"><p class="cs-round__number">10</p></div>
+        <div class="cs-round"><p class="cs-round__number">11</p></div>
+        <div class="cs-round"><p class="cs-round__number">12</p></div>
+        <button type="button" class="cs-collapse" aria-expanded="true" aria-label="Свернуть виджет"><span class="cs-collapse__icon"></span></button>
+        <div class="cs-round"><p class="cs-round__number">13</p></div>
+        <div class="cs-round"><p class="cs-round__number">14</p></div>
+        <div class="cs-round"><p class="cs-round__number">15</p></div>
+        <div class="cs-round"><p class="cs-round__number">16</p></div>
+        <div class="cs-round"><p class="cs-round__number">17</p></div>
+        <div class="cs-round"><p class="cs-round__number">18</p></div>
+        <div class="cs-round"><p class="cs-round__number">19</p></div>
+        <div class="cs-round"><p class="cs-round__number">20</p></div>
+        <div class="cs-round"><p class="cs-round__number">21</p></div>
+        <div class="cs-round"><p class="cs-round__number">22</p></div>
+        <div class="cs-round"><p class="cs-round__number">23</p></div>
+        <div class="cs-round"><p class="cs-round__number">24</p></div>
+      </div>
+    </article>
+  </div>
+
+  <script>
+    // Stream: local video starts on load (muted, looped). The poster + play button stay
+    // as a fallback if the browser blocks autoplay.
+    (() => {
+      const stream = document.getElementById('cs-stream');
+      const play = stream.querySelector('.cs-stream__play');
+      function start() {
+        if (stream.classList.contains('is-playing')) return;
+        const video = document.createElement('video');
+        video.className = 'cs-stream__video';
+        video.src = stream.dataset.src;
+        video.muted = true;
+        video.loop = true;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.setAttribute('aria-label', 'Трансляция матча');
+        stream.appendChild(video);
+        stream.classList.add('is-playing');
+        video.play().catch(() => {
+          // autoplay blocked: back to the poster with the play button
+          video.remove();
+          stream.classList.remove('is-playing');
+        });
+      }
+      play.addEventListener('click', start);
+      start();
+    })();
+  </script>
+  <script src="cs-widget.js"></script>
+  <script>
+    // Demo controls → widget. Simulation API is exposed by cs-widget.js as window.csWidget
+    (() => {
+      const widget = document.querySelector('.cs-widget');
+      const demo = document.querySelector('.demo');
+      const press = (attr, value) => document.querySelectorAll(`[${attr}]`)
+        .forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute(attr) === String(value))));
+
+      // Stream on/off: without it the rosters take the whole row
+      document.querySelectorAll('[data-stream]').forEach(b => b.addEventListener('click', () => {
+        widget.classList.toggle('is-no-stream', b.dataset.stream !== 'on');
+        csWidget.syncVideo();
+        press('data-stream', b.dataset.stream);
+      }));
+
+      document.querySelectorAll('[data-sim]').forEach(b => b.addEventListener('click', () => {
+        csWidget.setRunning(b.dataset.sim === 'on');
+      }));
+      document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => {
+        csWidget.setSpeed(+b.dataset.speed);
+        press('data-speed', b.dataset.speed);
+      }));
+      // Background art: sets --cs-bg on the widget. "none" = no photo: a plain light fill under the
+      // usual darkening, which turns it into a soft gradient
+      const PLAIN_BG = 'linear-gradient(#a7b5dc, #a7b5dc)';
+      document.querySelectorAll('[data-bg]').forEach(b => b.addEventListener('click', () => {
+        widget.style.setProperty('--cs-bg', b.dataset.bg === 'none' ? PLAIN_BG : `url("${b.dataset.bg}")`);
+        press('data-bg', b.dataset.bg);
+      }));
+      document.querySelectorAll('[data-teams]').forEach(b => b.addEventListener('click', () => {
+        widget.classList.toggle('is-teams-inner', b.dataset.teams === 'inner');
+        press('data-teams', b.dataset.teams);
+      }));
+      // Header size: default / a bit smaller / extremely compact
+      document.querySelectorAll('[data-headsize]').forEach(b => b.addEventListener('click', () => {
+        if (b.dataset.headsize === 'l') delete widget.dataset.head; else widget.dataset.head = b.dataset.headsize;
+        press('data-headsize', b.dataset.headsize);
+      }));
+      document.querySelectorAll('[data-width]').forEach(b => b.addEventListener('click', () => {
+        demo.style.width = b.dataset.width + 'px';
+        press('data-width', b.dataset.width);
+      }));
+
+      // Status: picking one pauses the simulation so it is not overwritten
+      const statusSeg = document.getElementById('demo-status');
+      statusSeg.innerHTML = csWidget.statuses.map(s => `<button type="button" data-status="${s}" aria-pressed="false">${s}</button>`).join('');
+      statusSeg.addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (b) csWidget.setStatus(b.dataset.status);
+      });
+
+      // Game situations
+      const SCENARIO_LABEL = { buy: 'Закуп', eco: 'Эко', plant: 'Плент', explode: 'Взрыв', defuse: 'Дефьюз', ace: 'Эйс', clutch: 'Клатч', timeout: 'Таймаут', overtime: 'Овертайм' };
+      const scenarioSeg = document.getElementById('demo-scenarios');
+      scenarioSeg.innerHTML = csWidget.scenarios.map(s => `<button type="button" data-scenario="${s}">${SCENARIO_LABEL[s] || s}</button>`).join('');
+      scenarioSeg.addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (b) csWidget.scenario(b.dataset.scenario);
+      });
+
+      document.querySelectorAll('[data-score]').forEach(b => b.addEventListener('click', () => {
+        const [side, delta] = b.dataset.score.split(':');
+        csWidget.changeScore(side, +delta);
+      }));
+      document.getElementById('demo-kill').addEventListener('click', () => csWidget.addKill());
+      document.getElementById('demo-reset').addEventListener('click', () => location.reload());
+
+      // Keep the toggles and the live line in sync with what the simulation reports
+      const now = document.getElementById('demo-now');
+      csWidget.onChange(({ running, status, scenario, phase }) => {
+        press('data-sim', running ? 'on' : 'off');
+        press('data-status', running ? '' : status);
+        press('data-scenario', scenario || '');
+        const who = scenario
+          ? `<span class="is-scenario">▶ ${SCENARIO_LABEL[scenario] || scenario}</span>`
+          : running ? 'Симуляция' : 'Пауза';
+        now.innerHTML = `${who} — <b></b>`;
+        now.querySelector('b').textContent = phase;
+      });
+    })();
+  </script>
+</body>
+</html>

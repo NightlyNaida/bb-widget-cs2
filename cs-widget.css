@@ -1,0 +1,1461 @@
+/* CS Widget / Desktop — port of Figma node 1037:7688 (DS-Web-Playground, page "Cyber Table") */
+
+@font-face {
+  font-family: "Gilroy";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("fonts/Gilroy-Regular.otf") format("opentype");
+}
+@font-face {
+  font-family: "Gilroy";
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url("fonts/Gilroy-Medium.otf") format("opentype");
+}
+@font-face {
+  font-family: "Gilroy";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("fonts/Gilroy-Bold.otf") format("opentype");
+}
+
+/* Theme-independent tokens, named after the Figma variables they mirror */
+:root {
+  --cyberwidget-bggradientopaque: rgb(30, 38, 63);
+  --cyberwidget-bggradienttransparent: rgba(30, 38, 63, 0);
+  --cyberwidget-borderglassstart: rgba(255, 255, 255, 0.1);
+  --cyberwidget-sidect: #5c9eff;
+  --cyberwidget-sidet: #ffba33;
+  --cyberwidget-teamplayer-bgteamplayer: rgba(255, 255, 255, 0.05);
+  --cyberwidget-teamplayer-text: #ffffff;
+  --match-time-bgscore: rgba(255, 255, 255, 0.1);
+  --match-time-text: #ffffff;
+  --team-bg: rgba(255, 255, 255, 0.2);
+  --team-textprimary: #ffffff;
+  --text-primary: #ffffff;
+  --text-additional400: #090a0a;
+  --opacity-light-0: rgba(255, 255, 255, 0);
+  --opacity-light-15: rgba(255, 255, 255, 0.15);
+  --opacity-light-30: rgba(255, 255, 255, 0.3);
+  --opacity-light-40: rgba(255, 255, 255, 0.4);
+  --opacity-light-45: rgba(255, 255, 255, 0.45);
+  --opacity-light-75: rgba(255, 255, 255, 0.75);
+  --sides-cs2-ct100: #5c9eff;
+  --sides-cs2-t100: #ffba33;
+  --opacity-dark-30: rgba(9, 10, 10, 0.3);
+  --glass-blur: 12px;
+}
+
+/* Background blur for every semi-transparent white surface */
+.cs-chip:not(.cs-money),
+.cs-score__box,
+.cs-logo,
+.cs-player,
+.cs-round:not(.cs-round--t):not(.cs-round--ct) {
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.cs-widget,
+.cs-widget * {
+  box-sizing: border-box;
+}
+
+.cs-widget {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 320px; /* < 560px: mobile layout, see the end of the file */
+  overflow: hidden;
+  container: cs-widget / inline-size;
+  /* the glass border is an inset outline drawn on top: a real border would leave a 1px strip
+     that the background layers (::before / ::after) can't reach */
+  outline: 1px solid var(--cyberwidget-borderglassstart);
+  outline-offset: -1px;
+  border-radius: 16px;
+  font-family: "Gilroy", sans-serif;
+  font-style: normal;
+  /* map art comes from --cs-bg (swappable, "none" = no art); the veil lives in ::before */
+  background:
+    linear-gradient(180deg, var(--cyberwidget-bggradientopaque) 0%, var(--cyberwidget-bggradienttransparent) 20%),
+    linear-gradient(90deg, var(--cyberwidget-bggradienttransparent) 62%, var(--cyberwidget-bggradientopaque) 100%),
+    linear-gradient(90deg, var(--cyberwidget-bggradientopaque) 0%, var(--cyberwidget-bggradienttransparent) 38%),
+    var(--cs-bg, url("assets/bg-map.png")) center / cover no-repeat,
+    var(--cyberwidget-bggradientopaque);
+  /* layers cover the 1px border too, otherwise raw art shows through the translucent border */
+  background-origin: border-box;
+}
+
+.cs-widget p {
+  margin: 0;
+}
+
+/* ---------- Header size ----------
+   Everything above the rosters (top row, teams, score, maps) is sized by these variables.
+   Three sizes, set with data-head on .cs-widget: default (L), "m" — a bit smaller, "s" — extremely compact */
+.cs-widget {
+  --hd-gap: 14px;          /* between the content rows */
+  --hd-chip-h: 21px;
+  --hd-chip-px: 9px;
+  --hd-chip-font: 11px;
+  --hd-chip-lh: 14px;
+  --hd-chip-icon: 12px;
+  --hd-feed-h: 28px;
+  --hd-feed-weapon-w: 35px;
+  --hd-feed-weapon-h: 14px;
+  --hd-feed-icon: 14px;
+  --hd-feed-headshot: 17px;
+  --hd-btn: 28px;          /* back button, view tabs */
+  --hd-btn-icon: 18px;
+  --hd-crumbs-font: 13px;
+  --hd-crumbs-lh: 16px;
+  --hd-main-gap: 14px;
+  --hd-team-gap: 10px;
+  --hd-logo: 56px;
+  --hd-logo-img: 40px;
+  --hd-info-gap: 3px;
+  --hd-name: 18px;
+  --hd-name-lh: 22px;
+  --hd-meta-font: 11px;
+  --hd-meta-lh: 14px;
+  --hd-rank: 14px;
+  --hd-center-gap: 7px;
+  --hd-score-box: 35px;
+  --hd-score-radius: 7px;
+  --hd-score-font: 23px;
+  --hd-score-lh: 28px;
+  --hd-series-w: 5px;
+  --hd-status-icon: 17px;
+}
+.cs-widget[data-head="m"] {
+  --hd-gap: 12px;
+  --hd-chip-h: 19px;
+  --hd-chip-px: 8px;
+  --hd-chip-font: 10px;
+  --hd-chip-lh: 12px;
+  --hd-chip-icon: 11px;
+  --hd-feed-h: 24px;
+  --hd-feed-weapon-w: 31px;
+  --hd-feed-weapon-h: 12px;
+  --hd-feed-icon: 12px;
+  --hd-feed-headshot: 15px;
+  --hd-btn: 24px;
+  --hd-btn-icon: 16px;
+  --hd-crumbs-font: 12px;
+  --hd-crumbs-lh: 14px;
+  --hd-main-gap: 12px;
+  --hd-team-gap: 8px;
+  --hd-logo: 46px;
+  --hd-logo-img: 33px;
+  --hd-info-gap: 2px;
+  --hd-name: 16px;
+  --hd-name-lh: 20px;
+  --hd-meta-font: 10px;
+  --hd-meta-lh: 12px;
+  --hd-rank: 12px;
+  --hd-center-gap: 5px;
+  --hd-score-box: 30px;
+  --hd-score-radius: 6px;
+  --hd-score-font: 20px;
+  --hd-score-lh: 24px;
+  --hd-series-w: 4px;
+  --hd-status-icon: 15px;
+}
+/* Extremely compact: the status chip moves next to the score, so the center is one line */
+.cs-widget[data-head="s"] {
+  --hd-gap: 8px;
+  --hd-chip-h: 17px;
+  --hd-chip-px: 7px;
+  --hd-chip-font: 10px;
+  --hd-chip-lh: 12px;
+  --hd-chip-icon: 10px;
+  --hd-feed-h: 20px;
+  --hd-feed-weapon-w: 27px;
+  --hd-feed-weapon-h: 11px;
+  --hd-feed-icon: 11px;
+  --hd-feed-headshot: 13px;
+  --hd-btn: 20px;
+  --hd-btn-icon: 14px;
+  --hd-crumbs-font: 11px;
+  --hd-crumbs-lh: 14px;
+  --hd-main-gap: 10px;
+  --hd-team-gap: 8px;
+  --hd-logo: 32px;
+  --hd-logo-img: 23px;
+  --hd-info-gap: 1px;
+  --hd-name: 14px;
+  --hd-name-lh: 17px;
+  --hd-meta-font: 10px;
+  --hd-meta-lh: 12px;
+  --hd-rank: 11px;
+  --hd-center-gap: 8px;
+  --hd-score-box: 24px;
+  --hd-score-radius: 5px;
+  --hd-score-font: 16px;
+  --hd-score-lh: 20px;
+  --hd-series-w: 3px;
+  --hd-status-icon: 13px;
+}
+.cs-widget[data-head="s"] .cs-center { flex-direction: row; }
+
+/* ---------- Content ---------- */
+.cs-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hd-gap);
+  align-items: flex-start;
+  width: 100%;
+  padding: 16px;
+  overflow: hidden;
+}
+
+/* Shared chip base (Money, Killfeed, Status, Map score) */
+.cs-chip {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  height: var(--hd-chip-h);
+  padding: 0 var(--hd-chip-px);
+  border-radius: calc(var(--hd-chip-h) / 2);
+  background: var(--match-time-bgscore);
+}
+.cs-chip-text {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: var(--hd-chip-font);
+  line-height: var(--hd-chip-lh);
+  white-space: nowrap;
+  color: var(--match-time-text);
+}
+
+/* Top: back + breadcrumbs | killfeed | view tabs. The side columns are equal, so the feed stays centred */
+.cs-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+
+/* Back button + breadcrumbs */
+.cs-nav {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+.cs-back {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: var(--hd-btn);
+  height: var(--hd-btn);
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--hd-btn) * 0.28);
+  background: var(--match-time-bgscore);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  cursor: pointer;
+}
+.cs-back:hover { background: var(--team-bg); }
+.cs-back:focus-visible { outline: 2px solid var(--match-time-text); outline-offset: 2px; }
+.cs-back__icon {
+  display: block;
+  width: var(--hd-btn-icon);
+  height: var(--hd-btn-icon);
+  background: var(--match-time-text);
+  -webkit-mask: url("assets/icon-back.svg") center / contain no-repeat;
+  mask: url("assets/icon-back.svg") center / contain no-repeat;
+}
+.cs-crumbs { min-width: 0; }
+.cs-crumbs ol {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cs-crumbs li {
+  flex-shrink: 0;
+  font-weight: 500;
+  font-size: var(--hd-crumbs-font);
+  line-height: var(--hd-crumbs-lh);
+  white-space: nowrap;
+  color: var(--match-time-text);
+}
+/* the last crumb (event name) is the one that gives way */
+.cs-crumbs li:last-child { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cs-crumbs li + li::before {
+  content: "/";
+  margin: 0 0.5em;
+  color: var(--opacity-light-40);
+}
+.cs-crumbs a { color: inherit; text-decoration: none; }
+.cs-crumbs a:hover { text-decoration: underline; }
+
+/* View tabs: stream / third-party stats widgets, icons only */
+.cs-views {
+  display: flex;
+  justify-self: end;
+  gap: 2px;
+  height: var(--hd-btn); /* as tall as the back button */
+  padding: 2px;
+  border-radius: calc(var(--hd-btn) * 0.28);
+  background: var(--match-time-bgscore);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+.cs-widget.is-no-stream .cs-views { visibility: hidden; }
+.cs-views__tab {
+  display: grid;
+  place-items: center;
+  width: calc(var(--hd-btn) - 4px); /* square */
+  height: calc(var(--hd-btn) - 4px);
+  padding: 0;
+  border: 0;
+  border-radius: calc((var(--hd-btn) - 4px) * 0.25);
+  background: transparent;
+  color: var(--opacity-light-40);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.cs-views__tab:hover { color: var(--opacity-light-75); }
+.cs-views__tab[aria-selected="true"] { background: var(--team-bg); color: var(--match-time-text); }
+.cs-views__tab:focus-visible { outline: 2px solid var(--match-time-text); outline-offset: 1px; }
+.cs-views__icon {
+  display: block;
+  width: calc(var(--hd-btn-icon) - 2px);
+  height: calc(var(--hd-btn-icon) - 2px);
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+.cs-views__tab--stream { --icon: url("assets/icon-videocam.svg"); }
+.cs-views__tab--live { --icon: url("assets/icon-live-stat.svg"); }
+.cs-views__tab--center { --icon: url("assets/icon-match-center.svg"); }
+.cs-views__tab--players { display: none; --icon: url("assets/icon-users.svg"); } /* mobile only */
+.cs-views__tab--stream[aria-selected="true"] { --icon: url("assets/icon-videocam-fill.svg"); }
+.cs-views__tab--live[aria-selected="true"] { --icon: url("assets/icon-live-stat-fill.svg"); }
+.cs-views__tab--center[aria-selected="true"] { --icon: url("assets/icon-match-center-fill.svg"); }
+
+/* CS Desktop / Money: the team's money, in the HLTV row (sum of the players' money) */
+.cs-money {
+  gap: 3px;
+}
+.cs-money--ct { background: var(--cyberwidget-sidect); }
+.cs-money--t { background: var(--cyberwidget-sidet); }
+.cs-money .cs-chip-text { color: var(--text-additional400); }
+.cs-money__icon { display: block; flex-shrink: 0; width: var(--hd-chip-icon); height: var(--hd-chip-icon); }
+
+/* Killfeed list: horizontal row in the middle of the top row, newest on the right,
+   oldest dissolves on the left after LIFE ms (see script in index.html) */
+.cs-killfeed-list {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: var(--hd-feed-h);
+  padding: 0 4px;
+  overflow: hidden;
+  position: relative;
+}
+.cs-killfeed-list > .cs-killfeed { z-index: 1; }
+
+/* CS Desktop / Killfeed (one entry) */
+.cs-killfeed {
+  position: relative;
+  gap: 5px;
+  max-width: 250px;
+  padding: 0 10px;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: cs-kf-in 0.25s ease-out;
+  transition: opacity 0.6s ease, max-width 0.3s ease 0.6s, padding 0.3s ease 0.6s;
+}
+/* Fade out first, then close the gap */
+.cs-killfeed.is-out { opacity: 0; max-width: 0; padding: 0; }
+@keyframes cs-kf-in { from { opacity: 0; transform: translateX(8px); } }
+.cs-killfeed__name--ct { color: var(--cyberwidget-sidect); }
+.cs-killfeed__name--t { color: var(--cyberwidget-sidet); }
+.cs-killfeed__weapon {
+  display: block;
+  flex-shrink: 0;
+  width: var(--hd-feed-weapon-w);
+  height: var(--hd-feed-weapon-h);
+  background: var(--match-time-text);
+  -webkit-mask: var(--weapon) center / contain no-repeat;
+  mask: var(--weapon) center / contain no-repeat;
+}
+.cs-killfeed__weapon--nade { width: var(--hd-feed-weapon-h); }
+.cs-killfeed__headshot { display: block; flex-shrink: 0; width: var(--hd-feed-headshot); height: var(--hd-feed-headshot); }
+@media (prefers-reduced-motion: reduce) {
+  .cs-killfeed { animation: none; transition: none; }
+}
+
+/* Main. No clipping here: the money chip next to the name bumps (scales) a little past its box */
+.cs-main {
+  display: flex;
+  gap: var(--hd-main-gap);
+  align-items: center;
+  width: 100%;
+}
+
+.cs-team {
+  display: flex;
+  flex: 1 0 0;
+  gap: var(--hd-team-gap);
+  align-items: center;
+  min-width: 1px;
+}
+.cs-team--right { justify-content: flex-end; }
+
+.cs-logo {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--hd-logo);
+  height: var(--hd-logo);
+  overflow: hidden;
+  border: 1px solid var(--cyberwidget-borderglassstart);
+  border-radius: 50%;
+  background: var(--team-bg);
+}
+.cs-logo__img {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--hd-logo-img);
+  height: var(--hd-logo-img);
+  overflow: hidden;
+}
+.cs-logo__img img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+.cs-logo__img--navi img {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.cs-logo__img--ence img {
+  left: -4.61%;
+  top: -3.62%;
+  width: 109.09%;
+  height: 126.09%;
+}
+
+.cs-team__info {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: var(--hd-info-gap);
+  align-items: flex-start;
+  min-width: 1px;
+}
+.cs-team--right .cs-team__info { align-items: flex-end; }
+
+.cs-team__name {
+  max-width: 100%;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: var(--hd-name);
+  line-height: var(--hd-name-lh);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--team-textprimary);
+}
+
+/* Teams pressed to the score (.is-teams-inner): logo right next to the score, name on its outer side,
+   aligned towards the centre; the HLTV row is mirrored too */
+.cs-widget.is-teams-inner .cs-team { flex-direction: row-reverse; }
+.cs-widget.is-teams-inner .cs-team--left .cs-team__info { align-items: flex-end; }
+.cs-widget.is-teams-inner .cs-team--left .cs-team__name { text-align: right; }
+.cs-widget.is-teams-inner .cs-team--right .cs-team__info { align-items: flex-start; }
+.cs-widget.is-teams-inner .cs-team__meta { flex-direction: row-reverse; }
+
+/* Rank + HLTV + team money. Not clipped: the money chip bumps (scales) a little past it */
+.cs-team__meta {
+  display: flex;
+  flex-shrink: 0;
+  gap: 5px;
+  align-items: center;
+}
+/* the money chip here is sized to the HLTV line */
+.cs-team__meta .cs-money {
+  height: calc(var(--hd-meta-lh) + 4px);
+  margin: 0 3px;
+  padding: 0 6px;
+  border-radius: calc((var(--hd-meta-lh) + 4px) / 2);
+}
+.cs-team__meta .cs-money .cs-chip-text { font-size: var(--hd-meta-font); line-height: var(--hd-meta-lh); }
+.cs-team__meta .cs-money__icon { width: calc(var(--hd-meta-lh) - 3px); height: calc(var(--hd-meta-lh) - 3px); }
+.cs-team__rank { display: block; flex-shrink: 0; width: var(--hd-rank); height: var(--hd-rank); }
+.cs-team__hltv {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: var(--hd-meta-font);
+  line-height: var(--hd-meta-lh);
+  white-space: nowrap;
+  color: var(--opacity-light-40);
+}
+
+/* Center */
+.cs-center {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: var(--hd-center-gap);
+  align-items: center;
+  overflow: hidden;
+}
+.cs-score {
+  display: flex;
+  flex-shrink: 0;
+  gap: 5px;
+  align-items: center;
+  overflow: hidden;
+}
+.cs-score__box {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--hd-score-box);
+  height: var(--hd-score-box);
+  overflow: hidden;
+  border-radius: var(--hd-score-radius);
+  background: var(--match-time-bgscore);
+}
+.cs-score__value,
+.cs-score__colon {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: var(--hd-score-font);
+  line-height: var(--hd-score-lh);
+  white-space: nowrap;
+  text-align: center;
+  color: var(--match-time-text);
+}
+
+/* Series score (maps won): vertical capsules as tall as the score box.
+   BO3 → 2 capsules per team, filled bottom-up. Neutral color on purpose:
+   sides (CT/T) swap during a map, a team's series score must not follow them */
+.cs-series {
+  display: flex;
+  flex-direction: column-reverse;
+  flex-shrink: 0;
+  gap: 3px;
+  height: var(--hd-score-box);
+}
+.cs-series--left { margin-right: 2px; }
+.cs-series--right { margin-left: 2px; }
+.cs-series__pip {
+  flex: 1 0 0;
+  width: var(--hd-series-w);
+  border-radius: 3px;
+  background: var(--opacity-light-15);
+}
+.cs-series__pip--won {
+  background: var(--match-time-text);
+  box-shadow: 0 0 7px rgba(255, 255, 255, 0.5);
+}
+
+/* CS Desktop / Status */
+.cs-status {
+  gap: 4px;
+}
+.cs-status__icon { display: block; flex-shrink: 0; width: var(--hd-status-icon); height: var(--hd-status-icon); }
+
+/* Maps: chips stay centered, the series label sits quietly to the right */
+.cs-maps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+.cs-maps__scores {
+  grid-column: 2;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.cs-maps__format {
+  grid-column: 3;
+  justify-self: start;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 14px;
+  white-space: nowrap;
+  color: var(--opacity-light-40);
+}
+
+/* CS Desktop / Map score: map name + score, winner logo, live indicator */
+.cs-mapscore {
+  gap: 5px;
+}
+.cs-mapscore__name { margin-right: 2px; }
+.cs-mapscore__separator {
+  flex-shrink: 0;
+  width: 1px;
+  height: calc(var(--hd-chip-lh) - 3px);
+  border-radius: 1px;
+  background: var(--opacity-light-40);
+}
+.cs-mapscore__lose { color: var(--opacity-light-40); }
+
+.cs-mapscore--played { padding-left: 3px; }
+.cs-mapscore__winner {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: calc(var(--hd-chip-h) - 5px);
+  height: calc(var(--hd-chip-h) - 5px);
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--team-bg);
+}
+.cs-mapscore__winner img { display: block; width: 75%; height: 75%; object-fit: contain; }
+
+.cs-mapscore--live {
+  background: var(--team-bg);
+  box-shadow: inset 0 0 0 1px var(--opacity-light-40);
+}
+.cs-mapscore__live {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--match-time-text);
+  animation: cs-live-blink 1.2s ease-in-out infinite;
+}
+@keyframes cs-live-blink {
+  50% { opacity: 0.2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-mapscore__live { animation: none; }
+}
+
+.cs-mapscore--upcoming .cs-chip-text { color: var(--opacity-light-40); }
+
+/* Rosters + stream: roster | stream 16:9 | roster. Rows stretch to the stream height */
+.cs-rosters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 50% minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+}
+.cs-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.cs-roster .cs-player { flex: 1 0 auto; }
+
+/* No stream: rosters take the whole row, as in the original Figma layout */
+/* The stream never gets narrower than at 860 (414px): below that the rosters give up the width,
+   and their plates drop the grenades to keep K/D + weapon */
+.cs-rosters { grid-template-columns: minmax(0, 1fr) max(50%, 414px) minmax(0, 1fr); }
+
+.cs-widget.is-no-stream .cs-stream { display: none; }
+.cs-widget.is-no-stream .cs-rosters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+/* Stream */
+/* At least 16:9; stretches to the rosters' height when they are taller (the video crops via object-fit) */
+.cs-stream {
+  position: relative;
+  align-self: stretch;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 12px;
+  background:
+    linear-gradient(var(--opacity-dark-30), var(--opacity-dark-30)),
+    url("assets/bg-map.png") center / cover no-repeat;
+}
+.cs-stream__video {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+  background: #000;
+}
+.cs-stream.is-playing .cs-stream__source,
+.cs-stream.is-playing .cs-stream__play { display: none; }
+.cs-stream::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--cyberwidget-borderglassstart);
+  pointer-events: none;
+}
+.cs-stream__source {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--opacity-dark-30);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+.cs-stream__play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 28px;
+  background: var(--team-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  cursor: pointer;
+}
+.cs-stream__play:focus-visible { outline: 2px solid var(--match-time-text); outline-offset: 2px; }
+.cs-stream__play-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  background: var(--match-time-text);
+  -webkit-mask: url("assets/icon-play.svg") center / contain no-repeat;
+  mask: url("assets/icon-play.svg") center / contain no-repeat;
+}
+
+/* Third-party stats widgets (view tabs): a placeholder over the stream slot, where the vendor's
+   iframe goes. The video pauses meanwhile */
+.cs-embed {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(30, 38, 63, 0.94), rgba(20, 25, 43, 0.96));
+}
+.cs-embed[hidden] { display: none; }
+.cs-embed__head { display: flex; gap: 6px; align-items: center; }
+.cs-embed__icon {
+  display: block;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  background: var(--match-time-text);
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+.cs-embed--live { --icon: url("assets/icon-live-stat-fill.svg"); }
+.cs-embed--center { --icon: url("assets/icon-match-center-fill.svg"); }
+.cs-embed__title { font-weight: 700; font-size: 13px; line-height: 16px; color: var(--match-time-text); }
+.cs-embed__head .cs-embed__vendor { margin-left: auto; font-weight: 500; font-size: 10px; line-height: 12px; color: var(--opacity-light-40); }
+.cs-embed__body { display: flex; flex: 1 1 auto; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
+.cs-embed__body span {
+  display: block;
+  flex-shrink: 0;
+  width: var(--w);
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--opacity-light-15) 30%, var(--opacity-light-30) 50%, var(--opacity-light-15) 70%) 0 0 / 300% 100%;
+  animation: cs-skeleton 1.6s linear infinite;
+}
+@keyframes cs-skeleton { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.cs-embed__note { font-weight: 500; font-size: 10px; line-height: 12px; text-align: center; color: var(--opacity-light-40); }
+@media (prefers-reduced-motion: reduce) {
+  .cs-embed__body span { animation: none; }
+}
+
+/* CS Desktop / Player — HP band with nickname, over K/D + utility + weapon.
+   Right side uses the same DOM, mirrored with row-reverse */
+.cs-player {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--cyberwidget-teamplayer-bgteamplayer);
+}
+.cs-player--right { flex-direction: row-reverse; }
+.cs-player--killed .cs-player__main { opacity: 0.4; }
+.cs-player__main {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 1px;
+}
+
+/* HP band: fill by --hp, nickname and HP number inside */
+.cs-player__hp {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--match-time-bgscore);
+}
+.cs-player--right .cs-player__hp { flex-direction: row-reverse; }
+.cs-player__hp > p { position: relative; }
+.cs-player__hp-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--hp, 100%);
+  transition: width 0.4s ease;
+}
+.cs-player--left .cs-player__hp-fill { left: 0; background: rgba(92, 158, 255, 0.45); }
+.cs-player--right .cs-player__hp-fill { right: 0; background: rgba(255, 186, 51, 0.45); }
+
+.cs-player__name {
+  flex: 1 0 0;
+  min-width: 1px;
+  overflow: hidden;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--cyberwidget-teamplayer-text);
+}
+.cs-player--right .cs-player__name { text-align: right; }
+/* Player money, next to the HP number: muted, so HP stays the main figure.
+   Narrow plates switch to the short form ($4.7K) */
+.cs-player__money {
+  flex-shrink: 0;
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--opacity-light-45);
+}
+.cs-player__money-short { display: none; }
+.cs-player__hp-value {
+  flex-shrink: 0;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--opacity-light-75);
+}
+
+/* Stats line: K/D + weapon */
+.cs-player__stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 20px;
+  padding: 0 2px 0 8px;
+}
+.cs-player--right .cs-player__stats { flex-direction: row-reverse; padding: 0 8px 0 2px; }
+
+/* Weapon: white PNG used as a mask (--weapon set by cs-widget.js), painted in the side colour.
+   Guns point to the centre: the right team's icon is mirrored */
+.cs-player__weapon {
+  display: block;
+  flex-shrink: 0;
+  width: 36px;
+  height: 14px;
+  -webkit-mask: var(--weapon) right center / contain no-repeat;
+  mask: var(--weapon) right center / contain no-repeat;
+}
+.cs-player--left .cs-player__weapon { background: var(--cyberwidget-sidect); }
+.cs-player--right .cs-player__weapon { background: var(--cyberwidget-sidet); --flip: -1; }
+.cs-player__weapon { transform: scaleX(var(--flip, 1)); }
+.cs-player__weapon.is-empty { visibility: hidden; }
+
+/* Buy phase: a freshly bought gun drops into the slot, a grenade pops in */
+.cs-player__weapon.is-bought { animation: cs-bought 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.3); }
+@keyframes cs-bought {
+  from { opacity: 0; transform: scaleX(var(--flip, 1)) translateY(-8px) scale(1.4); filter: brightness(2); }
+}
+.cs-player__nade { --nade-rot: 30deg; }
+.cs-player__nade.is-new { animation: cs-nade-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3); }
+@keyframes cs-nade-in {
+  from { opacity: 0; transform: rotate(var(--nade-rot)) translateY(-8px) scale(0.4); }
+}
+
+/* Utility: grenades as small round badges overlapping each other, next to the weapon */
+.cs-player__stats { gap: 6px; min-width: 0; overflow: hidden; }
+/* K/D is a <p>: the side-qualified selectors outrank `.cs-widget p { margin: 0 }` */
+.cs-player--left .cs-player__kd { margin-right: auto; }
+.cs-player--right .cs-player__kd { margin-right: 0; margin-left: auto; }
+.cs-player__utility {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+/* Bare grenade silhouettes, tilted 30° like the Figma "Rotate 30°" icons.
+   Same height for all, width follows each icon's own proportions */
+/* Grenades sit close to the weapon, but not glued to it */
+.cs-player__utility { gap: 5px; padding: 0 2px; }
+.cs-player--left .cs-player__utility { margin-right: -2px; }
+.cs-player--right .cs-player__utility { margin-left: -2px; }
+.cs-player__nade {
+  display: block;
+  flex-shrink: 0;
+  width: auto;
+  height: 14px;
+  opacity: 0.4;
+  transform: rotate(var(--nade-rot));
+}
+/* the molotov icon is already drawn tilted */
+.cs-player__nade.cs-player__nade--molotov { --nade-rot: 0deg; }
+
+/* Kills / deaths with icons */
+.cs-player__kd {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 3px;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--cyberwidget-teamplayer-text);
+}
+.cs-player__kd-icon {
+  display: block;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  background: var(--opacity-light-40);
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+.cs-player__kd-icon--kills { --icon: url("assets/icon-kills.svg"); }
+.cs-player__kd-icon--deaths { --icon: url("assets/round-elimination.svg"); margin-left: 6px; }
+
+/* Narrow widget with the stream on (560–859): the plates are ~120px wide, so their content
+   shrinks — smaller type, icons, weapon and paddings — and the grenades are dropped */
+@container cs-widget (min-width: 560px) and (max-width: 859px) {
+  .cs-widget:not(.is-no-stream) {
+    .cs-player { padding: 4px 6px; }
+    .cs-player__main { gap: 3px; }
+    .cs-player__hp { gap: 4px; height: 18px; padding: 0 6px; border-radius: 4px; }
+    .cs-player__name { font-size: 11px; line-height: 14px; }
+    .cs-player__hp-value { font-size: 10px; line-height: 14px; }
+    .cs-player__money { font-size: 10px; line-height: 14px; }
+    .cs-player__money-full { display: none; }
+    .cs-player__money-short { display: inline; }
+    .cs-player__stats { gap: 4px; height: 16px; padding: 0 0 0 6px; }
+    .cs-player--right .cs-player__stats { padding: 0 6px 0 0; }
+    .cs-player__kd { gap: 2px; font-size: 10px; line-height: 12px; }
+    .cs-player__kd-icon { width: 11px; height: 11px; }
+    .cs-player__kd-icon--deaths { margin-left: 4px; }
+    .cs-player__weapon { width: 28px; height: 11px; }
+    .cs-player__utility { display: none; }
+    .cs-player__action { column-gap: 3px; height: 16px; padding: 0 6px; grid-template-rows: 11px 2px; }
+    .cs-player__action-icon { width: 11px; height: 11px; }
+    .cs-player__action-label { font-size: 10px; line-height: 12px; }
+    .cs-player__action-time { font-size: 10px; line-height: 12px; }
+    .cs-player__action-bar { height: 2px; }
+    .cs-player__badge { font-size: 10px; line-height: 12px; }
+    .cs-player__badge::before { width: 10px; height: 10px; }
+  }
+}
+
+/* ---------- Rounds (Timeline_components) ---------- */
+.cs-rounds {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  align-items: center;
+  width: 100%;
+  overflow: visible; /* the overtime caption sits above the strip */
+}
+
+.cs-round {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 1px;
+  height: 32px;
+  padding: 8px 0 4px;
+  overflow: hidden;
+  border-bottom: 3px solid var(--opacity-light-30);
+  background: linear-gradient(180deg, var(--opacity-light-0), var(--opacity-light-15));
+}
+.cs-round--t {
+  border-bottom-color: var(--sides-cs2-t100);
+  background: linear-gradient(180deg, rgba(255, 186, 51, 0), rgba(255, 186, 51, 0.5));
+}
+.cs-round--ct {
+  border-bottom-color: var(--sides-cs2-ct100);
+  background: linear-gradient(180deg, rgba(92, 158, 255, 0), rgba(92, 158, 255, 0.5));
+}
+.cs-round--ongoing {
+  border-bottom-color: var(--opacity-light-75);
+  background: linear-gradient(180deg, var(--opacity-light-0), var(--opacity-light-45));
+}
+.cs-round__icon { display: block; flex-shrink: 0; width: 16px; height: 16px; }
+.cs-round__number {
+  width: 100%;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 12px;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+/* The strip is two equal halves around the collapse button: the button stays centred */
+.cs-rounds__half {
+  display: flex;
+  flex: 1 1 0;
+  gap: 2px;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Overtime: caption above the collapse button with the score before this OT.
+   The strip grows a top padding for it: 10px of air above the caption, 10px down to the cells
+   (the button is 3px lower than the cells' top, hence the 13px margin) */
+.cs-rounds.is-overtime { padding-top: 16px; }
+.cs-collapse-wrap { position: relative; display: flex; flex-shrink: 0; }
+.cs-collapse__caption {
+  position: absolute;
+  bottom: calc(100% + 13px); /* not margin: `.cs-widget p { margin: 0 }` outranks it */
+  left: 50%;
+  transform: translateX(-50%);
+  font-weight: 500;
+  font-size: 10px;
+  line-height: 12px;
+  white-space: nowrap;
+  color: var(--opacity-light-40);
+  pointer-events: none;
+}
+.cs-collapse__caption b {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Collapse button: sits between the halves (it also marks the side switch) */
+.cs-collapse {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--match-time-bgscore);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  transition: background 0.2s;
+}
+.cs-collapse:hover { background: var(--team-bg); }
+.cs-collapse:focus-visible { outline: 2px solid var(--match-time-text); outline-offset: 2px; }
+.cs-collapse__icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  background: var(--opacity-light-75);
+  -webkit-mask: url("assets/icon-chevron-up.svg") center / contain no-repeat;
+  mask: url("assets/icon-chevron-up.svg") center / contain no-repeat;
+  transition: transform 0.3s ease;
+}
+.cs-widget.is-collapsed .cs-collapse__icon { transform: rotate(180deg); }
+.cs-rounds .cs-collapse { margin: 0 6px; } /* set apart from the round cells */
+
+/* Navy veil over the art, same in expanded and collapsed states: mutes the whole picture
+   and runs into solid navy at the bottom */
+.cs-widget::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(30, 38, 63, 0.6) 0%, rgba(30, 38, 63, 0.72) 55%, var(--cyberwidget-bggradientopaque) 100%);
+}
+.cs-content,
+.cs-rounds { position: relative; z-index: 1; }
+
+/* Collapsed widget: rosters and the stream fold away.
+   The real height is animated by cs-widget.js (setCollapsed); content fades out first when folding
+   and fades in a beat later when unfolding */
+.cs-rosters {
+  overflow: clip;
+  overflow-clip-margin: 24px; /* keep row glows visible */
+  transition:
+    height 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-top 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.4s ease 0.15s;
+}
+.cs-widget.is-collapsed .cs-rosters {
+  margin-top: calc(-1 * var(--hd-gap)); /* swallow the content gap */
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    height 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-top 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-rosters, .cs-widget.is-collapsed .cs-rosters { transition: none; }
+}
+
+/* ---------- Live behaviour (driven by cs-widget.js) ---------- */
+.cs-player { transition: opacity 0.35s; }
+.cs-player.is-hit { animation: cs-hit 0.45s ease-out; }
+
+/* Player in focus (ace, clutch, defuser): outline + soft glow in the side colour */
+.cs-player--left { --side-rgb: 92, 158, 255; }
+.cs-player--right { --side-rgb: 255, 186, 51; }
+.cs-player.is-highlight {
+  background: rgba(var(--side-rgb), 0.14);
+  box-shadow: inset 0 0 0 1px rgba(var(--side-rgb), 0.9), 0 0 18px rgba(var(--side-rgb), 0.35);
+  animation: cs-highlight 1.6s ease-in-out infinite;
+}
+@keyframes cs-highlight {
+  50% { box-shadow: inset 0 0 0 1px rgba(var(--side-rgb), 0.5), 0 0 8px rgba(var(--side-rgb), 0.15); }
+}
+.cs-player.is-highlight.is-hit { animation: cs-hit 0.45s ease-out; }
+
+/* ACE mark in the HP band right after the nickname: a spade + "Ace".
+   Bare white, no container; pops in */
+.cs-player { position: relative; }
+.cs-player__badge {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  align-items: center;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 14px;
+  white-space: nowrap;
+  color: var(--match-time-text);
+  animation: cs-badge-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.5);
+}
+.cs-player__badge::before {
+  content: "";
+  display: block;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  -webkit-mask: url("assets/icon-spade.svg") center / contain no-repeat;
+  mask: url("assets/icon-spade.svg") center / contain no-repeat;
+}
+/* the nickname stops growing so the icon sits right after it; the HP number keeps its edge */
+.cs-player__hp:has(.cs-player__badge) .cs-player__name { flex: 0 1 auto; }
+.cs-player--left .cs-player__hp:has(.cs-player__badge) .cs-player__hp-value { margin-left: auto; }
+.cs-player--right .cs-player__hp:has(.cs-player__badge) .cs-player__hp-value { margin-right: auto; }
+@keyframes cs-badge-in { from { opacity: 0; transform: scale(0); } }
+
+/* Planting / defusing: the stats line (K/D + weapon) gives way to a stamp of the same height —
+   icon, label and countdown over a progress bar in the side colour. The nickname stays */
+.cs-player.is-acting .cs-player__stats { display: none; }
+.cs-player__action {
+  display: grid;
+  grid-template-areas: "icon label time" "bar bar bar";
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: 14px 3px;
+  row-gap: 3px;
+  column-gap: 4px;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  color: rgb(var(--side-rgb));
+  animation: cs-action-in 0.3s ease-out;
+}
+.cs-player--right .cs-player__action { grid-template-areas: "time label icon" "bar bar bar"; grid-template-columns: auto minmax(0, 1fr) auto; }
+.cs-player__action-icon {
+  grid-area: icon;
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+.cs-player__action--plant { --icon: url("assets/status-demining.svg"); } /* C4 */
+.cs-player__action--defuse { --icon: url("assets/status-defuse.svg"); }  /* pliers */
+.cs-player__action-label {
+  grid-area: label;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--opacity-light-75);
+}
+.cs-player--right .cs-player__action-label { text-align: right; }
+.cs-player__action-time {
+  grid-area: time;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+/* the bar fills as the action goes; mirrored on the right, like the HP fill */
+.cs-player__action-bar {
+  grid-area: bar;
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--opacity-light-15);
+}
+.cs-player__action-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  border-radius: inherit;
+  background: currentColor;
+  transform: scaleX(var(--progress, 0));
+  transform-origin: left;
+}
+.cs-player--right .cs-player__action-bar::before { transform-origin: right; }
+@keyframes cs-action-in { from { opacity: 0; transform: translateY(4px); } }
+@keyframes cs-hit { from { background: rgba(255, 46, 77, 0.35); } }
+
+/* Score odometer: digits stack in one grid cell and roll on a drum (rotateX around a point behind them).
+   The old digit rolls away and fades out first; the new one starts a beat later, so they never cross
+   at full opacity. The score box (overflow: hidden) clips whatever leaves it */
+.cs-score__value {
+  position: relative;
+  display: grid;
+  perspective: 160px;
+}
+.cs-odo__digit {
+  grid-area: 1 / 1;
+  display: block;
+  transform-origin: 50% 50% calc(var(--hd-score-lh) / -2);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+.cs-odo__digit.is-out { animation: cs-odo-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards; }
+.cs-odo__digit.is-in { animation: cs-odo-in 0.26s cubic-bezier(0, 0, 0.2, 1) 0.08s both; }
+.cs-odo__digit.is-out.is-rev { animation-name: cs-odo-out-rev; }
+.cs-odo__digit.is-in.is-rev { animation-name: cs-odo-in-rev; }
+@keyframes cs-odo-out {
+  0%   { opacity: 1; transform: none; filter: blur(0); }
+  70%  { opacity: 0; }
+  100% { opacity: 0; transform: translateY(110%) rotateX(-70deg); filter: blur(3px); }
+}
+@keyframes cs-odo-in {
+  0%   { opacity: 0; transform: translateY(-110%) rotateX(70deg); filter: blur(3px); }
+  100% { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes cs-odo-out-rev {
+  0%   { opacity: 1; transform: none; filter: blur(0); }
+  70%  { opacity: 0; }
+  100% { opacity: 0; transform: translateY(-110%) rotateX(70deg); filter: blur(3px); }
+}
+@keyframes cs-odo-in-rev {
+  0%   { opacity: 0; transform: translateY(110%) rotateX(-70deg); filter: blur(3px); }
+  100% { opacity: 1; transform: none; filter: blur(0); }
+}
+
+.cs-score__value,
+.cs-money { transition: transform 0.3s ease; }
+.cs-score__value.is-bump,
+.cs-money.is-bump { transform: scale(1.15); }
+
+
+/* Event chips in the feed (plant, defuse, ace…) */
+.cs-killfeed--event { gap: 5px; }
+.cs-killfeed__event-icon { display: block; flex-shrink: 0; width: 14px; height: 14px; }
+.cs-killfeed--t { box-shadow: inset 0 0 0 1px rgba(255, 186, 51, 0.45); }
+.cs-killfeed--ct { box-shadow: inset 0 0 0 1px rgba(92, 158, 255, 0.45); }
+
+/* FX layer over the whole widget: bomb beeps, defuse, explosion */
+.cs-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: inherit;
+  pointer-events: none;
+}
+/* Bomb planted: a short red glow from the edges on every beep */
+.cs-fx.is-beep { animation: cs-beep 0.45s ease-out; }
+@keyframes cs-beep {
+  from { box-shadow: inset 0 0 0 1px rgba(255, 46, 77, 0.8), inset 0 0 40px rgba(255, 46, 77, 0.35); }
+  to   { box-shadow: inset 0 0 0 1px rgba(255, 46, 77, 0), inset 0 0 40px rgba(255, 46, 77, 0); }
+}
+.cs-status.is-beep { animation: cs-status-beep 0.45s ease-out; }
+@keyframes cs-status-beep { from { background: rgba(255, 46, 77, 0.55); } }
+
+/* Defusing: a calm blue glow breathing from the edges */
+.cs-fx.is-defusing { animation: cs-defusing 1.4s ease-in-out infinite; }
+@keyframes cs-defusing {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(92, 158, 255, 0.25), inset 0 0 24px rgba(92, 158, 255, 0.12); }
+  50%      { box-shadow: inset 0 0 0 1px rgba(92, 158, 255, 0.6), inset 0 0 48px rgba(92, 158, 255, 0.3); }
+}
+/* Defused: one bright blue wave that fades out */
+.cs-fx.is-defused { animation: cs-defused 1.2s ease-out; }
+@keyframes cs-defused {
+  0%   { box-shadow: inset 0 0 0 2px rgba(92, 158, 255, 0.9), inset 0 0 80px rgba(92, 158, 255, 0.5); background: rgba(92, 158, 255, 0.12); }
+  100% { box-shadow: inset 0 0 0 2px rgba(92, 158, 255, 0), inset 0 0 160px rgba(92, 158, 255, 0); background: rgba(92, 158, 255, 0); }
+}
+/* Explosion: warm yellow flash from the edges + the whole widget shakes */
+.cs-fx.is-explode { animation: cs-explode 1.4s ease-out; }
+@keyframes cs-explode {
+  0%   { box-shadow: inset 0 0 0 2px rgba(255, 186, 51, 1), inset 0 0 140px rgba(255, 186, 51, 0.75); background: rgba(255, 210, 110, 0.28); }
+  25%  { box-shadow: inset 0 0 0 2px rgba(255, 186, 51, 0.6), inset 0 0 100px rgba(255, 140, 40, 0.45); background: rgba(255, 170, 60, 0.12); }
+  100% { box-shadow: inset 0 0 0 2px rgba(255, 186, 51, 0), inset 0 0 60px rgba(255, 140, 40, 0); background: rgba(255, 170, 60, 0); }
+}
+.cs-widget.is-shake { animation: cs-shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+@keyframes cs-shake {
+  10%, 90% { transform: translate(-1px, 1px); }
+  20%, 80% { transform: translate(3px, -2px); }
+  30%, 50%, 70% { transform: translate(-5px, 2px); }
+  40%, 60% { transform: translate(5px, -2px); }
+}
+
+.cs-round.is-new { animation: cs-round-in 0.5s ease-out; }
+@keyframes cs-round-in { from { opacity: 0; transform: scaleY(0.4); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-player.is-hit, .cs-player.is-highlight, .cs-player__badge, .cs-player__action, .cs-round.is-new, .cs-widget.is-shake,
+  .cs-player__weapon.is-bought, .cs-player__nade.is-new { animation: none; }
+  .cs-player__hp-fill, .cs-score__value, .cs-money { transition: none; }
+}
+
+/* ---------- Mobile (widget < 560px): the app layout with all the desktop fields ----------
+   The scoreboard is always visible. Under it one slot shows the stream, the rosters or a stats widget:
+   the view tabs get a 4th tab, "Составы" (.is-m-players, set by cs-widget.js).
+   Without a stream the rosters are always there. The round strip is a plain scrollable ribbon */
+@container cs-widget (max-width: 559px) {
+  /* smaller header than on desktop; "Компакт" (data-head="s") still goes further */
+  .cs-widget,
+  .cs-widget[data-head="m"] {
+    --hd-gap: 10px;
+    --hd-chip-h: 19px;
+    --hd-chip-px: 8px;
+    --hd-chip-font: 10px;
+    --hd-chip-lh: 12px;
+    --hd-chip-icon: 11px;
+    --hd-feed-h: 24px;
+    --hd-feed-weapon-w: 31px;
+    --hd-feed-weapon-h: 12px;
+    --hd-feed-icon: 12px;
+    --hd-feed-headshot: 15px;
+    --hd-btn: 26px;
+    --hd-btn-icon: 16px;
+    --hd-main-gap: 8px;
+    --hd-logo: 40px;
+    --hd-logo-img: 28px;
+    --hd-info-gap: 2px;
+    --hd-name: 14px;
+    --hd-name-lh: 17px;
+    --hd-meta-font: 10px;
+    --hd-meta-lh: 12px;
+    --hd-rank: 11px;
+    --hd-center-gap: 6px;
+    --hd-score-box: 30px;
+    --hd-score-radius: 6px;
+    --hd-score-font: 20px;
+    --hd-score-lh: 24px;
+    --hd-series-w: 4px;
+    --hd-status-icon: 15px;
+  }
+  .cs-content { padding: 12px; }
+
+  /* Top: back | feed | view tabs. No breadcrumbs; only the newest feed entry */
+  .cs-top { grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; }
+  .cs-crumbs { display: none; }
+  .cs-killfeed-list { padding: 0; }
+  .cs-killfeed-list > .cs-killfeed:not(:last-child) { display: none; }
+  .cs-views__tab--players { display: grid; }
+
+  /* Teams as in the app: logo at the edge, name and the rank + HLTV + money row under it */
+  .cs-main { align-items: flex-start; }
+  .cs-team,
+  .cs-widget.is-teams-inner .cs-team { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .cs-team--right,
+  .cs-widget.is-teams-inner .cs-team--right { flex-direction: column-reverse; align-items: flex-end; }
+  /* the name may run past the logo column into the free space under the score */
+  .cs-team__info { flex: none; width: max-content; max-width: calc(50cqw - 52px); }
+  .cs-widget.is-teams-inner .cs-team--left .cs-team__info { align-items: flex-start; }
+  .cs-widget.is-teams-inner .cs-team--left .cs-team__name { text-align: left; }
+  .cs-widget.is-teams-inner .cs-team--right .cs-team__info { align-items: flex-end; }
+  .cs-widget.is-teams-inner .cs-team__meta { flex-direction: row; }
+  .cs-team__meta { gap: 4px; }
+  .cs-team__meta .cs-money { margin: 0 0 0 2px; }
+  .cs-team--right .cs-team__meta .cs-money { margin: 0 2px 0 0; }
+
+  /* Maps: chips, the series label under them */
+  .cs-maps { display: flex; flex-direction: column; gap: 6px; }
+
+  /* Stream / stats widget or rosters in the slot under the scoreboard */
+  .cs-rosters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+  .cs-roster { gap: 3px; }
+  .cs-stream { grid-column: 1 / -1; }
+  .cs-widget:not(.is-no-stream) .cs-roster { display: none; }
+  .cs-widget.is-m-players .cs-stream { display: none; }
+  .cs-widget.is-m-players .cs-roster { display: flex; }
+
+  /* Compact plates (as at 560–859), but the grenades stay: the plates are ~165px here */
+  .cs-widget {
+    .cs-player { padding: 4px 6px; border-radius: 6px; }
+    .cs-player__main { gap: 3px; }
+    .cs-player__hp { gap: 4px; height: 18px; padding: 0 6px; border-radius: 4px; }
+    .cs-player__name { font-size: 11px; line-height: 14px; }
+    .cs-player__hp-value { font-size: 10px; line-height: 14px; }
+    .cs-player__money { font-size: 10px; line-height: 14px; }
+    .cs-player__stats { gap: 4px; height: 16px; padding: 0 0 0 6px; }
+    .cs-player--right .cs-player__stats { padding: 0 6px 0 0; }
+    .cs-player__kd { gap: 2px; font-size: 10px; line-height: 12px; }
+    .cs-player__kd-icon { width: 11px; height: 11px; }
+    .cs-player__kd-icon--deaths { margin-left: 4px; }
+    .cs-player__weapon { height: 11px; }
+    .cs-player__utility { display: flex; gap: 3px; padding: 0; }
+    .cs-player__nade { height: 11px; }
+    .cs-player__action { column-gap: 3px; height: 16px; padding: 0 6px; grid-template-rows: 11px 2px; }
+    .cs-player__action-icon { width: 11px; height: 11px; }
+    .cs-player__action-label { font-size: 10px; line-height: 12px; }
+    .cs-player__action-time { font-size: 10px; line-height: 12px; }
+    .cs-player__action-bar { height: 2px; }
+    .cs-player__badge { font-size: 10px; line-height: 12px; }
+    .cs-player__badge::before { width: 10px; height: 10px; }
+  }
+
+  /* Round strip: every round in a row, scrolled sideways; a small gap marks each side switch */
+  .cs-rounds,
+  .cs-rounds.is-overtime {
+    gap: 2px;
+    padding-top: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+  .cs-rounds::-webkit-scrollbar { display: none; }
+  .cs-rounds .cs-round { flex: 0 0 28px; }
+  .cs-rounds .cs-round.is-switch { margin-left: 6px; }
+}
