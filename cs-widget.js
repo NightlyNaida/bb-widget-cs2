@@ -4,9 +4,9 @@
 // Score, round strip, money, map chips and series capsules follow. Left team = NAVI (CT colour),
 // right team = ENCE (T colour); sides do not swap in this demo.
 (() => {
-  const ROUND_TIME = 115, BUY_TIME = 9, BOMB_TIME = 40, PLANT_TIME = 3, DEFUSE_TIME = 7, BUY_STEP = 220, BUY_PAUSE = 1200;
+  const ROUND_TIME = 115, BUY_TIME = 9, BOMB_TIME = 40, PLANT_TIME = csMotion.actionDurations.plant, DEFUSE_TIME = csMotion.actionDurations.defuse, BUY_STEP = 220, BUY_PAUSE = 1200;
   const POST_ROUND = 3; // seconds between the round end and the buy phase
-  const KILL_LIFE = 6000, KILL_MAX = 4, SERIES_WIN = 2;
+  const SERIES_WIN = 2;
 
   const TEAM = { ct: { name: 'NAVI', logo: 'assets/logo-navi.png' }, t: { name: 'ENCE', logo: 'assets/logo-ence.png' } };
   // Weapon icons live in assets/weapons/<id>.png (white, used as CSS masks)
@@ -67,7 +67,8 @@
     roundOver: false, postRound: 0, // after-round pause before the buy phase
     collapsed: false,                // minimized: rosters and stream hidden
     highlight: null,  // { side, i } — the player in focus: ace, clutch, planter, defuser
-    view: 'stream',   // stream | live | center (| players on mobile) — what the center slot shows
+    view: 'stream',   // desktop center slot
+    mobilePanel: 'widget', mobileTab: 'info', mobilePlayers: false,
     action: null,     // { kind: 'plant' | 'defuse', side, i, total, left } — see startAction
     scenario: null,   // the game situation being played on demand, null when it is just the simulation
     lastResult: '',   // how the last round ended, shown in the demo panel during Buy time
@@ -104,10 +105,10 @@
   // Team money = sum of its players' money
   const teamMoney = side => S.players[side].reduce((sum, p) => sum + p.money, 0);
   const earn = (p, amount) => { p.money = Math.min(MONEY_MAX, p.money + amount); };
-  const fmtK = n => (Math.round(n / 100) / 10) + 'K';
+  const fmtK = csMotion.formatBalance;
   const other = side => (side === 'ct' ? 't' : 'ct');
   const alive = side => S.players[side].filter(p => p.hp > 0);
-  const bump = el => { el.classList.remove('is-bump'); void el.offsetWidth; el.classList.add('is-bump'); setTimeout(() => el.classList.remove('is-bump'), 300); };
+  const bump = el => csMotion.bump(el);
 
   const el = {
     rosters: { ct: document.querySelectorAll('.cs-roster')[0], t: document.querySelectorAll('.cs-roster')[1] },
@@ -126,8 +127,7 @@
     for (const side of ['ct', 't']) {
       el.rosters[side].querySelectorAll('.cs-player').forEach((row, i) => {
         const p = S.players[side][i];
-        row.style.setProperty('--hp', p.hp + '%');
-        row.classList.toggle('cs-player--killed', p.hp <= 0);
+        csMotion.playerHealth(row, p.hp);
         const focus = !!S.highlight && S.highlight.side === side && S.highlight.i === i;
         row.classList.toggle('is-highlight', focus);
         // ACE mark in the HP band, right after the nickname: spade + "Ace"
@@ -173,10 +173,11 @@
         weapon.classList.toggle('is-empty', !p.weapon); // empty hands at the start of the buy phase
         if (p.weapon) {
           weapon.style.setProperty('--weapon', weaponUrl(p.weapon));
-          weapon.style.width = weaponWidth(p.weapon);
+          weapon.style.setProperty('--weapon-width', weaponWidth(p.weapon));
+          weapon.style.setProperty('--weapon-ratio', WEAPON_RATIO[p.weapon]);
           weapon.title = WEAPON[p.weapon];
         }
-        if (p.freshWeapon) { restart(weapon, 'is-bought'); p.freshWeapon = false; }
+        if (p.freshWeapon) { csMotion.playerEffect(weapon, 'weapon'); p.freshWeapon = false; }
         let util = row.querySelector('.cs-player__utility');
         if (!util) {
           util = document.createElement('div');
@@ -186,38 +187,22 @@
         util.setAttribute('aria-label', p.utility.length ? 'Гранаты: ' + p.utility.map(u => UTILITY[u]).join(', ') : 'Нет гранат');
         util.innerHTML = p.utility.map((u, n) =>
           `<img class="cs-player__nade cs-player__nade--${u}${n === p.freshNade ? ' is-new' : ''}" src="assets/utility/${u}.png" alt="" title="${UTILITY[u]}">`).join('');
+        if (p.freshNade !== null) {
+          const fresh = util.children[p.freshNade];
+          if (fresh) csMotion.playerEffect(fresh, 'grenade');
+        }
         p.freshNade = null;
       });
-      el.money[side].querySelector('.cs-chip-text').textContent = fmtK(teamMoney(side));
+      csMotion.balance(el.money[side], teamMoney(side));
     }
+    renderLoadouts();
     paintAction();
   }
 
   // Odometer: the old number rolls down and fades, the new one rolls in from the top.
   // When the number goes down, the drum turns the other way.
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  function odometer(node, value) {
-    const next = String(value);
-    const current = node.querySelector('.cs-odo__digit:not(.is-out)');
-    if (current && current.textContent === next) return;
-    if (!current || reducedMotion.matches) {
-      node.innerHTML = `<span class="cs-odo__digit">${next}</span>`;
-      return;
-    }
-    const reverse = Number(next) < Number(current.textContent);
-    current.classList.remove('is-in', 'is-rev');
-    current.classList.add('is-out');
-    if (reverse) current.classList.add('is-rev');
-    current.addEventListener('animationend', () => current.remove(), { once: true });
-    setTimeout(() => current.remove(), 450); // safety net if animationend never fires (background tab)
-    const digit = document.createElement('span');
-    digit.className = 'cs-odo__digit is-in' + (reverse ? ' is-rev' : '');
-    digit.textContent = next;
-    node.appendChild(digit);
-    const settle = () => digit.classList.remove('is-in', 'is-rev');
-    digit.addEventListener('animationend', settle, { once: true });
-    setTimeout(settle, 450);
-  }
+  const odometer = (node, value) => csMotion.odometer(node, value);
 
   function renderScore() {
     odometer(el.scoreValues[0], S.rounds.ct);
@@ -226,12 +211,16 @@
     for (const side of ['ct', 't']) {
       el.series[side].querySelectorAll('.cs-series__pip').forEach((pip, i) => pip.classList.toggle('cs-series__pip--won', i < S.series[side]));
     }
+    compactHead.querySelector('[data-score="ct"]').textContent = S.rounds.ct;
+    compactHead.querySelector('[data-score="t"]').textContent = S.rounds.t;
   }
 
   function renderStatus() {
     const st = STATUS[S.status];
     el.status.querySelector('.cs-status__icon').src = `assets/${st.icon}.svg`;
     el.status.querySelector('.cs-chip-text').textContent = st.label(S);
+    compactHead.querySelector('.cs-compact__status img').src = `assets/${st.icon}.svg`;
+    compactHead.querySelector('.cs-compact__status span').textContent = st.label(S);
   }
 
   function renderMaps() {
@@ -249,7 +238,8 @@
           `<span class="cs-mapscore__live"></span><p class="cs-chip-text cs-mapscore__name">${m.name}</p>` +
           `<p class="cs-chip-text">${S.rounds.ct}</p><span class="cs-mapscore__separator"></span><p class="cs-chip-text">${S.rounds.t}</p></div>`;
       }
-      return `<div class="cs-chip cs-mapscore cs-mapscore--upcoming" aria-label="${m.name}: впереди"><p class="cs-chip-text cs-mapscore__name">${m.name}</p></div>`;
+      // Future maps remain in match data for progression; the scoreboard shows played/live maps.
+      return '';
     }).join('');
   }
 
@@ -272,7 +262,7 @@
 
     const cell = (i, extra = '') => {
       const r = S.history[i];
-      if (r) return `<div class="cs-round cs-round--${r.w}${i === fresh ? ' is-new' : ''}${extra}" title="Раунд ${i + 1}"><img class="cs-round__icon" src="assets/${ROUND_ICON[r.type]}.svg" alt=""></div>`;
+      if (r) return `<div class="cs-round cs-round--${r.w}${extra}" data-round="${i}" title="Раунд ${i + 1}"><img class="cs-round__icon" src="assets/${ROUND_ICON[r.type]}.svg" alt=""></div>`;
       return `<div class="cs-round${i === played ? ' cs-round--ongoing' : ''}${extra}"><p class="cs-round__number">${i + 1}</p></div>`;
     };
 
@@ -284,6 +274,7 @@
         cells += cell(i, sideSwitch ? ' is-switch' : '');
       }
       el.rounds.innerHTML = cells;
+      csMotion.roundResult(el.rounds.querySelector(`[data-round="${fresh}"]`));
       el.rounds.classList.toggle('is-overtime', slots > REG);
       const current = el.rounds.querySelector('.cs-round--ongoing') || el.rounds.lastElementChild;
       el.rounds.scrollLeft = current.offsetLeft - (el.rounds.clientWidth - current.offsetWidth) / 2;
@@ -302,6 +293,7 @@
       for (let i = start + OT / 2; i < start + OT; i++) right += cell(i);
     }
     el.rounds.innerHTML = `<div class="cs-rounds__half">${left}</div>${button}<div class="cs-rounds__half">${right}</div>`;
+    csMotion.roundResult(el.rounds.querySelector(`[data-round="${fresh}"]`));
     el.rounds.classList.toggle('is-overtime', slots > REG);
   }
 
@@ -315,14 +307,12 @@
 
   function hit(side, i) {
     const row = el.rosters[side].querySelectorAll('.cs-player')[i];
-    row.classList.remove('is-hit'); void row.offsetWidth; row.classList.add('is-hit');
+    csMotion.playerEffect(row, 'hit');
   }
 
   // ---------- killfeed ----------
   function retire(entry) {
-    if (!entry.isConnected || entry.classList.contains('is-out')) return;
-    entry.classList.add('is-out');
-    setTimeout(() => entry.remove(), 1000);
+    return csMotion.feedRetire(entry);
   }
 
   function pushKill(ks, killer, victim, weapon, headshot) {
@@ -355,10 +345,7 @@
   }
 
   function addToFeed(entry) {
-    el.killfeed.appendChild(entry);
-    const visible = el.killfeed.querySelectorAll('.cs-killfeed:not(.is-out)');
-    if (visible.length > KILL_MAX) retire(visible[0]);
-    setTimeout(() => retire(entry), KILL_LIFE / Math.min(S.speed, 2));
+    csMotion.feedAdd(el.killfeed, entry, {speed:S.speed});
   }
 
   // ---------- effects: bomb beeps, defuse, explosion ----------
@@ -408,7 +395,8 @@
     if (!video) return;
     video.loop = true;
     video.playbackRate = S.speed;
-    if (S.running && !S.collapsed && S.view === 'stream' && !widget.classList.contains('is-no-stream')) video.play().catch(() => {});
+    const showingStream = isMobile() ? S.mobilePanel === 'stream' : !S.collapsed && S.view === 'stream';
+    if (S.running && showingStream && !widget.classList.contains('is-no-stream')) video.play().catch(() => {});
     else video.pause();
   }
 
@@ -431,10 +419,7 @@
       rostersBox.style.height = on ? '0px' : rostersBox.scrollHeight + 'px';
     }
     const btn = el.rounds.querySelector('.cs-collapse');
-    if (btn) {
-      btn.setAttribute('aria-expanded', String(!on));
-      btn.setAttribute('aria-label', `${on ? 'Развернуть' : 'Свернуть'} виджет`);
-    }
+    if (btn) csMotion.collapse(btn, !on);
     syncVideo();
   }
 
@@ -442,23 +427,180 @@
     if (e.target.closest('.cs-collapse')) setCollapsed(!S.collapsed);
   });
 
-  // Mobile (widget < 560px, same as the container query in the CSS): the round strip becomes a ribbon
-  // and the view tabs get "Составы". Crossing that width re-renders the strip; leaving mobile while
-  // the rosters are on brings the stream back (desktop shows the rosters anyway)
+  // The site's mobile view bar owns the media slot; one video is moved between layouts.
+  // The shell is also the query container for the widget itself, not only its descendants.
   const MOBILE_MAX = 559;
-  const isMobile = () => widget.clientWidth <= MOBILE_MAX;
+  const mobileViewport = matchMedia('(max-width: 767px)');
+  const shell = document.createElement('div');
+  shell.className = 'cs-shell';
+  widget.before(shell);
+  shell.append(widget);
+  const isMobile = () => mobileViewport.matches || shell.clientWidth <= MOBILE_MAX;
+  const stream = $('.cs-stream');
+  const streamAnchor = document.createComment('desktop media slot');
+  stream.before(streamAnchor);
+  const rostersAnchor = document.createComment('desktop rosters');
+  rostersBox.before(rostersAnchor);
+  const mobileMedia = document.createElement('div');
+  mobileMedia.className = 'cs-mobile-media';
+  mobileMedia.id = 'cs-mobile-media';
+  const compactHead = document.createElement('div');
+  compactHead.className = 'cs-compact';
+  compactHead.setAttribute('role', 'group');
+  compactHead.setAttribute('aria-label', 'Команды, счёт и статус раунда');
+  compactHead.innerHTML = `<div class="cs-compact__team"><img src="${TEAM.ct.logo}" alt=""><span></span></div>` +
+    '<div class="cs-compact__score"><b data-score="ct"></b><span class="cs-compact__status"><img alt=""><span></span></span><b data-score="t"></b></div>' +
+    `<div class="cs-compact__team cs-compact__team--right"><span></span><img src="${TEAM.t.logo}" alt=""></div>`;
+  compactHead.querySelectorAll('.cs-compact__team span').forEach((n, i) => { n.textContent = document.querySelectorAll('.cs-team__name')[i].textContent; });
+  widget.prepend(compactHead);
+  const loadouts = document.createElement('div');
+  loadouts.className = 'cs-loadouts';
+  loadouts.innerHTML = '<div class="cs-loadout cs-loadout--ct" aria-label="Оружие NAVI"></div>' +
+    '<button type="button" class="cs-players-toggle" aria-expanded="false" aria-controls="cs-mobile-rosters" aria-label="Показать составы"><span></span></button>' +
+    '<div class="cs-loadout cs-loadout--t" aria-label="Оружие ENCE"></div>';
+  rostersBox.id = 'cs-mobile-rosters';
+  widget.append(loadouts);
+  const siteBar = document.createElement('nav');
+  siteBar.className = 'cs-site-bar';
+  siteBar.setAttribute('aria-label', 'Просмотр матча');
+  const mobileTabs = [
+    ['info', 'widget', 'Информация о матче', 'info'],
+    ['esports', 'widget', 'Киберспортивный виджет', 'esports'],
+    ['stream', 'stream', 'Трансляция', 'broadcast'],
+    ['providers', 'live', 'Виджеты матча', 'providers'],
+    ['xg', 'xg', 'xG', 'xg'],
+    ['statistics', 'statistics', 'Статистика', 'statistics'],
+    ['score', 'score', 'Счёт', 'score'],
+    ['xg-alt', 'xg-alt', 'Дополнительный xG', 'xg'],
+  ];
+  siteBar.innerHTML = mobileTabs.map(([id, panel, label, icon]) =>
+    `<button type="button" class="cs-site-tab cs-site-tab--${id}" data-tab="${id}" data-panel="${panel}" aria-pressed="${id === 'info'}" aria-label="${label}" title="${label}"${id === 'providers' ? ' aria-expanded="false" aria-controls="cs-widget-picker" aria-haspopup="true"' : ''}>` +
+    (id === 'providers'
+      ? '<span class="cs-site-tab__lead"><img src="assets/tabs/providers.svg" alt=""></span><img class="cs-site-tab__stack cs-site-tab__stack--near" src="assets/tabs/stack.svg" alt=""><img class="cs-site-tab__stack cs-site-tab__stack--far" src="assets/tabs/stack.svg" alt="">'
+      : `<img src="assets/tabs/${icon}.svg" alt="">`) + '</button>').join('');
+  const siteNavigation = document.createElement('div');
+  siteNavigation.className = 'cs-site-navigation';
+  // Some Figma icons contain the inactive opacity in the asset itself.
+  // Lift their alpha for selection without changing the exported SVG files.
+  siteNavigation.innerHTML = '<svg class="cs-tab-filters" width="0" height="0" aria-hidden="true"><defs><filter id="cs-tab-active-alpha" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncA type="linear" slope="2.5"/></feComponentTransfer></filter></defs></svg>';
+  const widgetPicker = document.createElement('div');
+  widgetPicker.className = 'cs-widget-picker';
+  widgetPicker.id = 'cs-widget-picker';
+  widgetPicker.hidden = true;
+  widgetPicker.setAttribute('role', 'group');
+  widgetPicker.setAttribute('aria-label', 'Виджеты матча');
+  widgetPicker.innerHTML = '<button type="button" data-provider="live"><img src="assets/icon-live-stat.svg" alt="">Live-статистика</button>' +
+    '<button type="button" data-provider="center"><img src="assets/icon-match-center.svg" alt="">Матч-центр</button>';
+  siteNavigation.append(siteBar, widgetPicker);
+  shell.append(mobileMedia, siteNavigation);
+  // Additional destinations use the same provider placeholder as the existing demo widgets.
+  for (const [id, title, icon] of [['xg', 'xG', 'xg'], ['statistics', 'Статистика', 'statistics'], ['score', 'Счёт', 'score'], ['xg-alt', 'Дополнительный xG', 'xg']]) {
+    const panel = stream.querySelector('.cs-embed--live').cloneNode(true);
+    panel.className = 'cs-embed cs-embed--mobile';
+    panel.dataset.view = id;
+    panel.hidden = true;
+    panel.setAttribute('aria-label', title);
+    panel.querySelector('.cs-embed__title').textContent = title;
+    panel.style.setProperty('--icon', `url("assets/tabs/${icon}.svg")`);
+    stream.append(panel);
+  }
+  function renderLoadouts() {
+    for (const side of ['ct', 't']) {
+      loadouts.querySelector(`.cs-loadout--${side}`).innerHTML = S.players[side].map(p =>
+        `<span class="cs-loadout__player${p.hp <= 0 ? ' is-dead' : ''}" role="img" aria-label="${p.name}: ${p.hp <= 0 ? 'погиб' : p.weapon ? WEAPON[p.weapon] : 'без оружия'}">${p.weapon ? `<i style='--weapon: ${weaponUrl(p.weapon)}'></i>` : ''}</span>`).join('');
+    }
+  }
+  function setMobilePlayers(on) {
+    S.mobilePlayers = on;
+    widget.classList.toggle('is-m-players', on);
+    const toggle = loadouts.querySelector('button');
+    toggle.setAttribute('aria-expanded', String(on));
+    toggle.setAttribute('aria-label', on ? 'Скрыть составы' : 'Показать составы');
+  }
+  loadouts.querySelector('button').addEventListener('click', () => setMobilePlayers(!S.mobilePlayers));
+  function closeWidgetPicker() {
+    widgetPicker.hidden = true;
+    siteBar.querySelector('[data-tab="providers"]').setAttribute('aria-expanded', 'false');
+  }
+  function setMobilePanel(panel, tab) {
+    if (panel === 'stream' && widget.classList.contains('is-no-stream')) { panel = 'widget'; tab = 'info'; }
+    if (tab) S.mobileTab = tab;
+    S.mobilePanel = panel;
+    shell.classList.toggle('is-media', isMobile() && panel !== 'widget');
+    siteBar.querySelectorAll('button').forEach(b => {
+      b.setAttribute('aria-pressed', String(b.dataset.tab === S.mobileTab));
+      b.disabled = b.dataset.panel === 'stream' && widget.classList.contains('is-no-stream');
+    });
+    stream.querySelectorAll('.cs-embed').forEach(p => { p.hidden = p.dataset.view !== panel; });
+    syncVideo();
+  }
+  siteBar.addEventListener('click', e => {
+    const button = e.target.closest('[data-panel]');
+    if (!button) return;
+    if (button.dataset.tab === 'providers') {
+      widgetPicker.hidden = !widgetPicker.hidden;
+      button.setAttribute('aria-expanded', String(!widgetPicker.hidden));
+      return;
+    }
+    closeWidgetPicker();
+    const turnOff = button.dataset.tab === S.mobileTab && button.dataset.panel !== 'widget';
+    setMobilePanel(turnOff ? 'widget' : button.dataset.panel, turnOff ? 'info' : button.dataset.tab);
+  });
+  widgetPicker.addEventListener('click', e => {
+    const button = e.target.closest('[data-provider]');
+    if (!button) return;
+    setMobilePanel(button.dataset.provider, 'providers');
+    closeWidgetPicker();
+  });
+  document.addEventListener('click', e => {
+    if (!siteNavigation.contains(e.target)) closeWidgetPicker();
+  });
+  siteNavigation.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !widgetPicker.hidden) {
+      closeWidgetPicker();
+      siteBar.querySelector('[data-tab="providers"]').focus();
+    }
+  });
+  function placeMobileContent() {
+    if (isMobile()) {
+      mobileMedia.append(stream);
+      loadouts.before(rostersBox);
+      setMobilePlayers(S.mobilePlayers);
+      setMobilePanel(S.mobilePanel);
+    } else {
+      streamAnchor.after(stream);
+      rostersAnchor.after(rostersBox);
+      widget.classList.remove('is-m-players');
+      shell.classList.remove('is-media');
+      stream.querySelectorAll('.cs-embed').forEach(p => { p.hidden = p.dataset.view !== S.view; });
+      syncVideo();
+    }
+  }
+  new MutationObserver(() => {
+    if (isMobile()) setMobilePanel(S.mobilePanel);
+  }).observe(widget, { attributes: true, attributeFilter: ['class'] });
   let wasMobile = isMobile();
-  new ResizeObserver(() => {
+  placeMobileContent();
+  const updateLayout = () => {
     if (isMobile() === wasMobile) return;
     wasMobile = isMobile();
-    if (!wasMobile && S.view === 'players') setView('stream');
+    placeMobileContent();
     renderRounds();
-  }).observe(widget);
+  };
+  new ResizeObserver(updateLayout).observe(shell);
+  mobileViewport.addEventListener('change', updateLayout);
 
   // ---------- view tabs: the stream or a third-party stats widget in the center slot ----------
   const viewTabs = [...document.querySelectorAll('.cs-views__tab')];
   function setView(view) {
+    if (isMobile()) {
+      if (view === 'players') setMobilePlayers(!S.mobilePlayers);
+      else setMobilePanel(view, view === 'widget' ? 'info' : view === 'stream' ? 'stream' : 'providers');
+      return;
+    }
     S.view = view;
+    widget.classList.toggle('is-media-hidden', view === 'widget');
+    if (!S.collapsed) rostersBox.style.height = '';
     widget.classList.toggle('is-m-players', view === 'players');
     viewTabs.forEach(t => {
       const on = t.dataset.view === view;
@@ -544,8 +686,7 @@
     const a = S.action;
     if (!a) return;
     const row = el.rosters[a.side].querySelectorAll('.cs-player')[a.i];
-    row.style.setProperty('--progress', (1 - a.left / a.total).toFixed(4));
-    row.querySelector('.cs-player__action-time').textContent = a.left.toFixed(1);
+    csMotion.playerActionProgress(row, 1 - a.left / a.total, a.left);
   }
   // Advanced by frames for a smooth bar, and by a timer so it keeps going where frames stop
   // (background tab): both share one clock, so time is never counted twice
@@ -634,6 +775,7 @@
     // team rewards (5 players): the whole team rebuys every round, so it needs a full buy's worth
     S.players[win].forEach(p => earn(p, WIN_REWARD));
     S.players[lose].forEach(p => earn(p, LOSS_REWARD));
+    renderPlayers();
     S.planted = false;
 
     if (S.rounds[win] >= mapTarget(S.rounds.ct, S.rounds.t)) {
@@ -659,7 +801,6 @@
     }
     renderStatus();
     bump(el.scoreValues[win === 'ct' ? 0 : 1]);
-    bump(el.money[win]);
     emit();
   }
 
@@ -941,6 +1082,7 @@
     scenarios: Object.keys(SCENARIOS),
     onChange(fn) { listeners.push(fn); emit(); },
     syncVideo,
+    setView,
     setRunning(on) {
       S.running = on;
       if (on && !S.roundOver && !SIM_STATUSES.includes(S.status)) { S.status = 'Timer'; renderStatus(); }

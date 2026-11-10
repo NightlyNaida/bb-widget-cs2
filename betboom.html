@@ -545,13 +545,17 @@ ymaps[class$="default-cluster"] ymaps { color: rgb(255, 255, 255); font-family: 
 .__threadswidget_invite_animation.__threadswidget_invite_animation-6 { transform: translateY(-200%); opacity: 0; }
 .__threadswidget_invite_animation.__threadswidget_invite_animation-7 { transform: scale(0) rotate(720deg); opacity: 0; }
 .__threadswidget_invite_animation.__threadswidget_invite_animation-8 { transform: translateX(-60%) scale(1.5, 1); opacity: 0.5; }</style><link rel="stylesheet" href="cs-widget.css">
+<link rel="stylesheet" href="cs-widget-mobile.css">
 <style>
   /* mock: the site's desktop or mobile layout by width */
   @media (max-width: 767px) { .bbm--desk { display: none; } }
   @media (min-width: 768px) { .bbm--mob { display: none; } }
   /* the widget takes the whole slot of the old header card + scoreboard */
   .bb-cs-slot { display: block; }
-  .bb-cs-slot > .cs-widget { width: 100%; }
+  .bb-cs-slot > .cs-widget, .bb-cs-slot > .cs-shell { width: 100%; }
+  .bb-motion-link { display: block; width: fit-content; margin: 0 0 8px auto; padding: 6px 10px;
+    border: 1px solid #343841; border-radius: 6px; color: #c8d8ff; background: #171a20;
+    font: 12px/18px Arial, sans-serif; text-decoration: none; }
   /* cookie popup */
   .sc-e10d787f-0 { display: none !important; }
 </style>
@@ -576,6 +580,7 @@ ymaps[class$="default-cluster"] ymaps { color: rgb(255, 255, 255); font-family: 
           </div>
           <div class="cs-killfeed-list" id="cs-killfeed" aria-label="Килл-фид" aria-live="polite"></div>
           <div class="cs-views" role="tablist" aria-label="Что показывать">
+            <button type="button" class="cs-views__tab cs-views__tab--widget" role="tab" data-view="widget" aria-selected="false" tabindex="-1" aria-label="Без видео" title="Показать составы без видео"><span class="cs-views__icon"></span></button>
             <button type="button" class="cs-views__tab cs-views__tab--stream" role="tab" data-view="stream" aria-selected="true" aria-label="Трансляция" title="Трансляция"><span class="cs-views__icon"></span></button>
             <button type="button" class="cs-views__tab cs-views__tab--players" role="tab" data-view="players" aria-selected="false" tabindex="-1" aria-label="Составы" title="Составы"><span class="cs-views__icon"></span></button>
             <button type="button" class="cs-views__tab cs-views__tab--live" role="tab" data-view="live" aria-selected="false" tabindex="-1" aria-label="Live-статистика" title="Live-статистика"><span class="cs-views__icon"></span></button>
@@ -650,9 +655,6 @@ ymaps[class$="default-cluster"] ymaps { color: rgb(255, 255, 255); font-family: 
               <span class="cs-mapscore__live"></span>
               <p class="cs-chip-text cs-mapscore__name">Anubis</p>
               <p class="cs-chip-text">3</p><span class="cs-mapscore__separator"></span><p class="cs-chip-text">4</p>
-            </div>
-            <div class="cs-chip cs-mapscore cs-mapscore--upcoming" aria-label="Ancient: впереди">
-              <p class="cs-chip-text cs-mapscore__name">Ancient</p>
             </div>
           </div>
           <p class="cs-maps__format">BO3 · Финал</p>
@@ -783,8 +785,12 @@ ymaps[class$="default-cluster"] ymaps { color: rgb(255, 255, 255); font-family: 
   (() => {
     const mq = matchMedia('(max-width: 767px)');
     const widget = document.querySelector('.cs-widget');
+    const motionLink = document.createElement('a');
+    motionLink.className = 'bb-motion-link'; motionLink.href = 'motion.html';
+    motionLink.textContent = 'Анимации элементов ↗';
     const place = () => {
-      document.querySelector(`.bb-cs-slot[data-slot="${mq.matches ? 'mob' : 'desk'}"]`).appendChild(widget);
+      const slot = document.querySelector(`.bb-cs-slot[data-slot="${mq.matches ? 'mob' : 'desk'}"]`);
+      slot.appendChild(widget.closest('.cs-shell') || widget); slot.prepend(motionLink);
       if (window.csWidget) csWidget.syncVideo();
     };
     place();
@@ -809,7 +815,10 @@ ymaps[class$="default-cluster"] ymaps { color: rgb(255, 255, 255); font-family: 
         video.setAttribute('aria-label', 'Трансляция матча');
         stream.appendChild(video);
         stream.classList.add('is-playing');
-        video.play().catch(() => {
+        video.play().catch(error => {
+          // Switching to the mobile widget pauses the initial autoplay request.
+          // Keep that video so the site's media bar can resume it later.
+          if (error.name === 'AbortError') return;
           // autoplay blocked: back to the poster with the play button
           video.remove();
           stream.classList.remove('is-playing');
@@ -819,5 +828,8 @@ ymaps[class$="default-cluster"] ymaps { color: rgb(255, 255, 255); font-family: 
       start();
     })();
   </script>
+<script src="cs-motion.js"></script>
+<script src="cs-player-motion.js"></script>
+<script src="cs-feed-motion.js"></script>
 <script src="cs-widget.js"></script>
 </body></html>

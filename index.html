@@ -5,11 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CS Widget / Desktop</title>
   <link rel="stylesheet" href="cs-widget.css">
+  <link rel="stylesheet" href="cs-widget-mobile.css">
   <style>
     body { margin: 0; padding: 40px; background: #111214; font-family: "Gilroy", system-ui, sans-serif; color: #e6e8ee; }
-    .demo { width: 1000px; transition: width 0.3s ease; }
+    .demo { width: 1000px; max-width: 100%; transition: width 0.3s ease; }
+    @media (max-width: 599px) { body { padding: 8px; } .demo-controls { padding: 10px; } }
 
     /* Demo controls (page chrome, not part of the widget) */
+    .demo-controls, .demo-controls * { box-sizing: border-box; }
     .demo-controls {
       display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center;
       width: max-content; max-width: 100%; margin-bottom: 20px; padding: 12px 16px;
@@ -35,6 +38,11 @@
     .demo-now b { color: #fff; font-weight: 700; }
     .demo-now .is-scenario { color: #ffba33; }
     #demo-scenarios button[aria-pressed="true"] { background: #ffba33; color: #10131b; }
+    @media (max-width: 599px) {
+      .demo-controls { width: 100%; padding: 10px; }
+      .demo-group, .demo-seg { flex-wrap: wrap; max-width: 100%; }
+      .demo-group { gap: 6px; }
+    }
   </style>
 </head>
 <body>
@@ -106,16 +114,20 @@
       <span class="demo-label">Ширина</span>
       <div class="demo-seg" role="group" aria-label="Ширина виджета">
         <button type="button" data-width="375" aria-pressed="false">375</button>
+        <button type="button" data-width="393" aria-pressed="false">393</button>
         <button type="button" data-width="414" aria-pressed="false">414</button>
+        <button type="button" data-width="560" aria-pressed="false">560</button>
         <button type="button" data-width="720" aria-pressed="false">720</button>
         <button type="button" data-width="860" aria-pressed="false">860</button>
         <button type="button" data-width="1000" aria-pressed="true">1000</button>
         <button type="button" data-width="1200" aria-pressed="false">1200</button>
+        <button type="button" data-width="1280" aria-pressed="false">1280</button>
       </div>
     </div>
     <div class="demo-group">
       <button type="button" class="demo-btn" id="demo-kill">+ Фраг</button>
       <button type="button" class="demo-btn" id="demo-reset">Сброс</button>
+      <a class="demo-btn" href="motion.html">Анимации элементов ↗</a>
     </div>
   </section>
 
@@ -135,6 +147,7 @@
           </div>
           <div class="cs-killfeed-list" id="cs-killfeed" aria-label="Килл-фид" aria-live="polite"></div>
           <div class="cs-views" role="tablist" aria-label="Что показывать">
+            <button type="button" class="cs-views__tab cs-views__tab--widget" role="tab" data-view="widget" aria-selected="false" tabindex="-1" aria-label="Без видео" title="Показать составы без видео"><span class="cs-views__icon"></span></button>
             <button type="button" class="cs-views__tab cs-views__tab--stream" role="tab" data-view="stream" aria-selected="true" aria-label="Трансляция" title="Трансляция"><span class="cs-views__icon"></span></button>
             <button type="button" class="cs-views__tab cs-views__tab--players" role="tab" data-view="players" aria-selected="false" tabindex="-1" aria-label="Составы" title="Составы"><span class="cs-views__icon"></span></button>
             <button type="button" class="cs-views__tab cs-views__tab--live" role="tab" data-view="live" aria-selected="false" tabindex="-1" aria-label="Live-статистика" title="Live-статистика"><span class="cs-views__icon"></span></button>
@@ -209,9 +222,6 @@
               <span class="cs-mapscore__live"></span>
               <p class="cs-chip-text cs-mapscore__name">Anubis</p>
               <p class="cs-chip-text">3</p><span class="cs-mapscore__separator"></span><p class="cs-chip-text">4</p>
-            </div>
-            <div class="cs-chip cs-mapscore cs-mapscore--upcoming" aria-label="Ancient: впереди">
-              <p class="cs-chip-text cs-mapscore__name">Ancient</p>
             </div>
           </div>
           <p class="cs-maps__format">BO3 · Финал</p>
@@ -356,7 +366,10 @@
         video.setAttribute('aria-label', 'Трансляция матча');
         stream.appendChild(video);
         stream.classList.add('is-playing');
-        video.play().catch(() => {
+        video.play().catch(error => {
+          // Switching to the mobile widget pauses the initial autoplay request.
+          // Keep that video so the site's media bar can resume it later.
+          if (error.name === 'AbortError') return;
           // autoplay blocked: back to the poster with the play button
           video.remove();
           stream.classList.remove('is-playing');
@@ -366,6 +379,9 @@
       start();
     })();
   </script>
+  <script src="cs-motion.js"></script>
+  <script src="cs-player-motion.js"></script>
+  <script src="cs-feed-motion.js"></script>
   <script src="cs-widget.js"></script>
   <script>
     // Demo controls → widget. Simulation API is exposed by cs-widget.js as window.csWidget
@@ -375,10 +391,9 @@
       const press = (attr, value) => document.querySelectorAll(`[${attr}]`)
         .forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute(attr) === String(value))));
 
-      // Stream on/off: without it the rosters take the whole row
+      // Choose the view without changing whether the stream is available.
       document.querySelectorAll('[data-stream]').forEach(b => b.addEventListener('click', () => {
-        widget.classList.toggle('is-no-stream', b.dataset.stream !== 'on');
-        csWidget.syncVideo();
+        csWidget.setView(b.dataset.stream === 'on' ? 'stream' : 'widget');
         press('data-stream', b.dataset.stream);
       }));
 

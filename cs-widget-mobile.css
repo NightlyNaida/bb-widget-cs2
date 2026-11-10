@@ -1,0 +1,192 @@
+/* Mobile composition. The site's media bar belongs outside the widget. */
+.cs-shell, .cs-shell * { box-sizing: border-box; }
+.cs-shell { width: 100%; min-width: 0; container: cs-widget / inline-size; }
+.cs-loadouts, .cs-compact, .cs-site-navigation, .cs-site-bar, .cs-mobile-media { display: none; }
+
+/* Follow the site's mobile viewport, as well as narrow desktop columns. */
+@media (max-width: 767px) {
+  .cs-shell { --cs-site-mobile: 1; }
+}
+@container cs-widget (max-width: 559px) or style(--cs-site-mobile: 1) {
+  .cs-widget, .cs-widget[data-head] {
+    --cs-widget-padding: 8px; --cs-widget-gap: 8px; --cs-widget-radius: 16px;
+    --cs-header-gap: 4px; --cs-header-column-gap: 8px; --cs-rosters-gap: 12px; --cs-roster-gap: 4px;
+    --cs-compact-height: 32px; --cs-compact-padding-x: 12px; --cs-compact-padding-y: 4px;
+    --cs-compact-gap: 4px; --cs-compact-radius: 16px; --cs-compact-logo-size: 24px; --cs-compact-logo-padding: 4px;
+    --cs-compact-score-padding: 2px; --cs-compact-score-radius: 4px; --cs-compact-score-height: 24px;
+    --cs-compact-bg: var(--match-time-bgscore); --cs-compact-border: var(--cyberwidget-borderglassstart); --cs-compact-score-bg: var(--team-bg);
+    --cs-type-compact-name-font-family: Gilroy, sans-serif; --cs-type-compact-name-font-size: 10px; --cs-type-compact-name-line-height: 12px; --cs-type-compact-name-font-style: 700;
+    --cs-type-compact-score-font-family: Gilroy, sans-serif; --cs-type-compact-score-font-size: 14px; --cs-type-compact-score-line-height: 18px; --cs-type-compact-score-font-style: 700;
+    --cs-feed-bg: var(--match-time-bgscore); --cs-feed-text: var(--match-time-text);
+    --cs-feed-ct: var(--cyberwidget-sidect); --cs-feed-t: var(--cyberwidget-sidet);
+    --cs-feed-border-mask: rgba(255, 255, 255, .45);
+    --cs-feed-gap: 2px; --cs-feed-weapon-width: 24px; --cs-feed-weapon-height: 12px; --cs-feed-icon-size: 12px;
+    --hd-chip-h: 16px; --hd-chip-px: 6px; --hd-chip-font: 10px; --hd-chip-lh: 12px;
+    --hd-feed-h: 16px; --hd-feed-weapon-w: 24px; --hd-feed-weapon-h: 10px;
+    --hd-feed-icon: 10px; --hd-feed-headshot: 12px; --hd-status-icon: 10px;
+    --hd-logo: 32px; --hd-logo-img: 24px; --hd-name: 12px; --hd-name-lh: 16px;
+    --hd-score-box: 24px; --hd-score-font: 18px; --hd-score-lh: 24px; --hd-score-radius: 4px;
+    --hd-meta-font: 10px; --hd-meta-lh: 12px;
+    --cs-chip-font-size: 10px; --cs-chip-line-height: 12px;
+    --cs-player-padding: 4px; --cs-player-radius: 8px; --cs-player-gap: 4px;
+    --cs-player-hp-height: 24px; --cs-player-hp-radius: 4px; --cs-player-hp-padding: 4px; --cs-player-hp-gap: 2px;
+    --cs-player-stats-height: 16px; --cs-player-stats-padding: 2px; --cs-player-stats-gap: 4px; --cs-player-kd-gap: 2px;
+    --cs-player-icon-size: 12px; --cs-player-weapon-width: 32px; --cs-player-weapon-height: 16px;
+    --cs-player-grenade-size: 8px; --cs-player-grenade-gap: 2px; --cs-player-action-gap: 2px;
+    --cs-player-progress-height: 2px; --cs-player-progress-radius: 2px;
+    --cs-player-highlight-width: 2px; --cs-player-highlight-blur: 16px; --cs-player-highlight-alpha: .15;
+    --cs-type-player-name-font-size: 12px; --cs-type-player-name-line-height: 16px; --cs-type-player-name-font-style: 700;
+    --cs-type-player-meta-font-size: 10px; --cs-type-player-meta-line-height: 12px; --cs-type-player-meta-font-style: 400;
+    --cs-type-player-stat-font-size: 10px; --cs-type-player-stat-line-height: 12px; --cs-type-player-stat-font-style: 700;
+    container-type: normal;
+    min-width: 0;
+    border-radius: var(--cs-widget-radius);
+  }
+  .cs-content {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) auto minmax(0, 1fr) 20px;
+    grid-template-rows: 16px 48px 18px 16px 12px;
+    gap: var(--cs-header-gap) var(--cs-header-column-gap);
+    padding: var(--cs-widget-padding);
+    align-items: center;
+    overflow: visible;
+  }
+  .cs-top, .cs-main, .cs-team, .cs-team__info, .cs-team__meta, .cs-center, .cs-maps,
+  .cs-widget.is-teams-inner .cs-team, .cs-widget.is-teams-inner .cs-team__meta { display: contents; }
+  .cs-nav, .cs-views, .cs-series { display: none; }
+  .cs-killfeed-list { grid-column: 1 / -1; grid-row: 1; justify-self: center; padding: 0; max-width: calc(100% - 112px); }
+  .cs-killfeed-list > .cs-killfeed:not(:last-child) { display: none; }
+  .cs-killfeed { gap: var(--cs-feed-gap); padding: 0 var(--cs-chip-padding-x); min-width: 0; max-width: 100%; flex-shrink: 1; background: var(--cs-feed-bg); border-radius: var(--cs-chip-radius); }
+  .cs-killfeed .cs-chip-text { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .cs-killfeed__name--ct { color: var(--cs-feed-ct); }
+  .cs-killfeed__name--t { color: var(--cs-feed-t); }
+  .cs-killfeed--event .cs-chip-text { color: var(--cs-feed-text); }
+  .cs-killfeed__weapon { width: var(--cs-feed-weapon-width); height: var(--cs-feed-weapon-height); background: var(--cs-feed-text); }
+  .cs-killfeed__weapon--nade { width: var(--cs-feed-weapon-height); }
+  .cs-killfeed__headshot, .cs-killfeed__event-icon { width: var(--cs-feed-icon-size); height: var(--cs-feed-icon-size); }
+  .cs-killfeed--ct, .cs-killfeed--t { box-shadow: none; }
+  .cs-killfeed--ct::after, .cs-killfeed--t::after { content: ''; position: absolute; inset: 0; border: 1px solid var(--cs-feed-ct); border-radius: inherit; mask: linear-gradient(var(--cs-feed-border-mask), var(--cs-feed-border-mask)); pointer-events: none; }
+  .cs-killfeed--t::after { border-color: var(--cs-feed-t); }
+  .cs-team__meta .cs-money { grid-row: 1; height: calc(var(--cs-chip-line-height) + 2 * var(--cs-chip-padding-y)); margin: 0; padding: 0 var(--cs-chip-padding-x); }
+  .cs-team__meta .cs-money__icon { width: var(--cs-chip-icon-size); height: var(--cs-chip-icon-size); }
+  .cs-money--ct { grid-column: 1 / 3; justify-self: start; }
+  .cs-money--t { grid-column: 4 / 6; justify-self: end; }
+  .cs-team .cs-logo { grid-row: 2; }
+  .cs-team--left .cs-logo { grid-column: 2; justify-self: center; }
+  .cs-team--right .cs-logo { grid-column: 4; justify-self: center; }
+  .cs-team__rank { grid-row: 2; width: 20px; height: 20px; }
+  .cs-team--left .cs-team__rank { grid-column: 1; }
+  .cs-team--right .cs-team__rank { grid-column: 5; }
+  .cs-score { grid-column: 3; grid-row: 2; justify-self: center; gap: var(--cs-score-gap); }
+  .cs-status { grid-column: 3; grid-row: 3; justify-self: center; align-self: start; }
+  .cs-team__name { grid-row: 3; align-self: end; width: 100%; max-width: 100%; }
+  .cs-team--left .cs-team__name, .cs-widget.is-teams-inner .cs-team--left .cs-team__name { grid-column: 2; justify-self: center; text-align: center; }
+  .cs-team--right .cs-team__name { grid-column: 4; justify-self: center; text-align: center; }
+  .cs-maps__scores { grid-column: 1 / -1; grid-row: 4; justify-self: center; gap: var(--cs-map-gap); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .cs-mapscore { gap: var(--cs-map-gap); padding: 0 var(--cs-map-padding-x); }
+  .cs-mapscore__winner, .cs-mapscore__name, .cs-mapscore__live { display: none; }
+  .cs-mapscore--live { box-shadow: none; }
+  .cs-mapscore__separator { height: var(--cs-map-separator-height); }
+  .cs-maps__format { grid-column: 1 / -1; grid-row: 5; justify-self: center; color: var(--cs-series-comment-text-compact); }
+  .cs-team__hltv { grid-column: 1 / -1; grid-row: 5; font-size: 10px; line-height: 12px; }
+  .cs-team--left .cs-team__hltv { justify-self: start; }
+  .cs-team--right .cs-team__hltv { justify-self: end; }
+
+  .cs-rounds, .cs-rounds.is-overtime {
+    gap: var(--cs-round-gap); padding-top: 0; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain;
+  }
+  .cs-rounds::-webkit-scrollbar { display: none; }
+  .cs-rounds .cs-round { flex: 0 0 var(--cs-round-mobile-width); }
+  .cs-rounds .cs-round.is-switch { margin-left: 6px; }
+  .cs-widget .cs-rosters { display: none; }
+  .cs-loadouts { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) var(--cs-players-toggle-width) minmax(0, 1fr); gap: var(--cs-loadouts-gap); align-items: center; width: 100%; padding: var(--cs-loadouts-padding); }
+  .cs-loadout { display: flex; justify-content: space-between; align-items: center; gap: var(--cs-loadout-gap); min-width: 0; height: var(--cs-loadout-height); padding: var(--cs-loadout-padding-y) var(--cs-loadout-padding-x); border-radius: var(--cs-loadout-radius); background: var(--opacity-dark-30); color: var(--cyberwidget-sidect); }
+  .cs-loadout--t { color: var(--cyberwidget-sidet); }
+  .cs-loadout__player { display: grid; flex: 1 1 0; min-width: 0; height: var(--cs-weapon-slot-size); place-items: center; }
+  .cs-loadout__player.is-dead { opacity: 0.25; }
+  .cs-loadout__player i { display: block; width: 100%; max-width: var(--cs-weapon-slot-size); height: var(--cs-weapon-icon-height); background: currentColor; mask: var(--weapon) center / contain no-repeat; -webkit-mask: var(--weapon) center / contain no-repeat; }
+  .cs-loadout--t i { transform: scaleX(-1); }
+  .cs-players-toggle { display: grid; place-items: center; width: var(--cs-players-toggle-width); height: var(--cs-players-toggle-height); padding: 0; border: 0; border-radius: var(--cs-players-toggle-radius); background: transparent; color: var(--opacity-light-75); cursor: pointer; }
+  .cs-players-toggle span { width: var(--cs-players-toggle-icon-size); height: var(--cs-players-toggle-icon-size); background: currentColor; mask: url("assets/side-switch.svg") center / contain no-repeat; -webkit-mask: url("assets/side-switch.svg") center / contain no-repeat; }
+  .cs-players-toggle:hover { background: var(--match-time-bgscore); color: white; }
+  .cs-players-toggle:focus-visible, .cs-site-tab:focus-visible { outline: 2px solid white; outline-offset: -2px; }
+
+  /* Expanded composition follows the app, with the prototype's complete player data. */
+  .cs-widget.is-m-players { outline: none; }
+  .cs-widget.is-m-players .cs-content, .cs-widget.is-m-players .cs-rounds { display: none; }
+  .cs-widget.is-m-players .cs-compact {
+    position: relative; z-index: 1; display: flex; align-items: center; gap: var(--cs-compact-gap);
+    width: calc(100% - 2 * var(--cs-widget-padding)); height: var(--cs-compact-height); min-height: var(--cs-compact-height); margin: var(--cs-widget-padding) var(--cs-widget-padding) 0; padding: var(--cs-compact-padding-y) var(--cs-compact-padding-x);
+    outline: 1px solid var(--cs-compact-border); outline-offset: -1px; border-radius: var(--cs-compact-radius);
+    background: var(--cs-compact-bg);
+    -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur));
+  }
+  .cs-compact__team { display: flex; flex: 1 1 0; min-width: 0; align-items: center; gap: var(--cs-compact-gap); }
+  .cs-compact__team img { flex-shrink: 0; width: var(--cs-compact-logo-size); height: var(--cs-compact-logo-size); padding: var(--cs-compact-logo-padding); border-radius: 50%; background: var(--team-bg); object-fit: contain; }
+  .cs-compact__team span { font: var(--cs-type-compact-name-font-style) var(--cs-type-compact-name-font-size)/var(--cs-type-compact-name-line-height) var(--cs-type-compact-name-font-family); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: white; }
+  .cs-compact__team--right { justify-content: flex-end; text-align: right; }
+  .cs-compact__score { display: flex; flex-shrink: 0; align-items: center; gap: var(--cs-compact-gap); height: var(--cs-compact-score-height); padding: 0 var(--cs-compact-score-padding); background: var(--cs-compact-score-bg); border-radius: var(--cs-compact-score-radius); color: white; }
+  .cs-compact__score b { font: var(--cs-type-compact-score-font-style) var(--cs-type-compact-score-font-size)/var(--cs-type-compact-score-line-height) var(--cs-type-compact-score-font-family); }
+  .cs-compact__status { display: flex; align-items: center; gap: var(--cs-chip-gap); padding: var(--cs-chip-padding-y) var(--cs-chip-padding-x); border-radius: var(--cs-chip-radius); background: var(--match-time-bgscore); font: var(--cs-chip-font-weight) var(--cs-chip-font-size)/var(--cs-chip-line-height) var(--cs-chip-font-family); white-space: nowrap; }
+  .cs-compact__status img { width: var(--cs-chip-icon-size); height: var(--cs-chip-icon-size); }
+  .cs-status, .cs-compact__status { --cs-chip-font-size: 8px; --cs-chip-line-height: 8px; --cs-chip-icon-size: 8px; height: 12px; padding: 2px; }
+  .cs-widget.is-m-players .cs-rosters, .cs-widget.is-m-players.is-collapsed .cs-rosters {
+    position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--cs-rosters-gap);
+    width: 100%; height: auto !important; margin: var(--cs-widget-gap) 0 0; padding: 0 var(--cs-widget-padding); opacity: 1; pointer-events: auto; overflow: visible; transition: none;
+  }
+  .cs-widget.is-m-players .cs-roster { display: flex; gap: var(--cs-roster-gap); }
+  .cs-widget.is-m-players .cs-loadouts { display: flex; justify-content: center; padding: var(--cs-loadouts-expanded-padding-y) var(--cs-loadouts-padding); }
+  .cs-widget.is-m-players .cs-loadout { display: none; }
+  .cs-widget .cs-player { padding: var(--cs-player-padding); border-radius: var(--cs-player-radius); }
+  .cs-widget .cs-player__main { gap: var(--cs-player-gap); }
+  .cs-widget .cs-player__hp { gap: var(--cs-player-hp-gap); height: var(--cs-player-hp-height); padding: 0 var(--cs-player-hp-padding); border-radius: var(--cs-player-hp-radius); }
+  .cs-widget .cs-player__name { font-size: var(--cs-type-player-name-font-size); line-height: var(--cs-type-player-name-line-height); font-weight: var(--cs-type-player-name-font-style); }
+  .cs-widget .cs-player__hp-value, .cs-widget .cs-player__money { font-size: var(--cs-type-player-meta-font-size); line-height: var(--cs-type-player-meta-line-height); font-weight: var(--cs-type-player-meta-font-style); }
+  .cs-widget .cs-player__money { display: block; }
+  .cs-widget .cs-player__money-full { display: none; }
+  .cs-widget .cs-player__money-short { display: inline; }
+  .cs-widget .cs-player__stats, .cs-widget .cs-player--right .cs-player__stats { display: flex; flex-direction: row; align-items: center; height: var(--cs-player-stats-height); gap: var(--cs-player-stats-gap); padding: 0 var(--cs-player-stats-padding); overflow: visible; }
+  .cs-widget .cs-player__kd { order: 1; gap: var(--cs-player-kd-gap); font-size: var(--cs-type-player-stat-font-size); line-height: var(--cs-type-player-stat-line-height); font-weight: var(--cs-type-player-stat-font-style); }
+  .cs-widget .cs-player--right .cs-player__kd { order: 3; }
+  .cs-widget .cs-player__kd-icon { width: var(--cs-player-icon-size); height: var(--cs-player-icon-size); }
+  .cs-widget .cs-player__kd-icon--deaths { margin-left: calc(var(--cs-player-stats-gap) - var(--cs-player-kd-gap)); }
+  .cs-widget .cs-player__weapon { display: block; order: 3; flex-shrink: 1; min-width: 0; width: min(var(--cs-player-weapon-width), calc(var(--weapon-ratio, 3.32) * var(--cs-player-weapon-height))); height: var(--cs-player-weapon-height); }
+  .cs-widget .cs-player--right .cs-player__weapon { order: 1; }
+  .cs-widget .cs-player__utility { order: 2; display: flex; width: max-content; height: var(--cs-player-weapon-height); gap: var(--cs-player-grenade-gap); margin: 0; padding: 0; }
+  /* Keep the 8px layout slot independent of the silhouette's natural width.
+     The artwork stays 12px high, matching the vector inside Figma's 16px icon. */
+  .cs-widget .cs-player__nade { --cs-nade-width: calc(var(--cs-player-icon-size) * 34 / 72); width: var(--cs-nade-width); height: var(--cs-player-icon-size); margin-inline: calc((var(--cs-player-grenade-size) - var(--cs-nade-width)) / 2); object-fit: contain; }
+  .cs-widget .cs-player__nade--he { --cs-nade-width: calc(var(--cs-player-icon-size) * 54 / 72); }
+  .cs-widget .cs-player__nade--flash { --cs-nade-width: calc(var(--cs-player-icon-size) * 31 / 72); }
+  .cs-widget .cs-player__nade--molotov { --cs-nade-width: calc(var(--cs-player-icon-size) * 49 / 72); }
+  .cs-widget .cs-player__nade--decoy { --cs-nade-width: calc(var(--cs-player-icon-size) * 62 / 72); }
+  .cs-widget .cs-player.is-acting .cs-player__stats { display: none; }
+  .cs-widget .cs-player__action { height: var(--cs-player-stats-height); padding: 0 var(--cs-player-stats-padding); grid-template-rows: var(--cs-player-icon-size) var(--cs-player-progress-height); gap: var(--cs-player-action-gap); align-content: center; }
+  .cs-widget .cs-player__action-label { font-size: var(--cs-type-player-meta-font-size); line-height: var(--cs-type-player-meta-line-height); font-weight: var(--cs-type-player-meta-font-style); }
+  .cs-widget .cs-player__action-time, .cs-widget .cs-player__badge { font-size: var(--cs-type-player-stat-font-size); line-height: var(--cs-type-player-stat-line-height); font-weight: var(--cs-type-player-stat-font-style); }
+  .cs-widget .cs-player__action-icon, .cs-widget .cs-player__badge::before { width: var(--cs-player-icon-size); height: var(--cs-player-icon-size); }
+  .cs-widget .cs-player__action-bar { height: var(--cs-player-progress-height); border-radius: var(--cs-player-progress-radius); }
+
+  .cs-site-navigation { position: relative; display: block; width: 100%; margin-top: 8px; }
+  .cs-site-bar { display: flex; align-items: center; width: 100%; height: 40px; gap: 26px; padding: 6px 16px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; background: rgba(0,0,0,0.4); }
+  .cs-site-bar::-webkit-scrollbar { display: none; }
+  .cs-tab-filters { position: absolute; pointer-events: none; }
+  .cs-site-tab { position: relative; display: grid; flex: 0 0 28px; place-items: center; width: 28px; height: 28px; padding: 4px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; }
+  .cs-site-tab > img, .cs-site-tab__lead > img { display: block; width: 20px; height: 20px; }
+  .cs-site-tab--esports:not([aria-pressed="true"]), .cs-site-tab--stream:not([aria-pressed="true"]) { opacity: 0.4; }
+  .cs-site-tab[aria-pressed="true"] > img:not(.cs-site-tab__stack), .cs-site-tab[aria-pressed="true"] .cs-site-tab__lead > img { filter: url("#cs-tab-active-alpha"); }
+  .cs-site-tab--providers { flex-basis: 44px; width: 44px; padding: 0; }
+  .cs-site-tab__lead { position: absolute; z-index: 3; left: 0; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.07); }
+  .cs-site-tab > .cs-site-tab__stack { position: absolute; width: 28px; height: 28px; top: 0; }
+  .cs-site-tab__stack--near { left: 8px; z-index: 2; }
+  .cs-site-tab__stack--far { left: 16px; z-index: 1; }
+  .cs-widget-picker { position: absolute; bottom: calc(100% + 8px); right: 8px; z-index: 10; min-width: 190px; padding: 4px; border: 1px solid var(--cyberwidget-borderglassstart); border-radius: 12px; background: #202122; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .cs-widget-picker[hidden] { display: none; }
+  .cs-widget-picker button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: white; text-align: left; font: 500 12px/16px Gilroy, sans-serif; cursor: pointer; }
+  .cs-widget-picker button:hover, .cs-widget-picker button:focus-visible { background: rgba(255,255,255,0.1); }
+  .cs-widget-picker img { display: block; width: 20px; height: 20px; }
+  .cs-site-tab:disabled { opacity: 0.25; cursor: default; }
+  .cs-shell.is-media > .cs-widget { display: none; }
+  .cs-shell.is-media > .cs-mobile-media { display: block; width: 100%; }
+  .cs-mobile-media .cs-stream { display: block; width: 100%; height: auto; min-height: 0; max-height: none; aspect-ratio: 16 / 9; }
+}

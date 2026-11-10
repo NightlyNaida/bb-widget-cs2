@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Анимации · CS табло</title>
+  <link rel="stylesheet" href="cs-widget.css">
+  <link rel="stylesheet" href="cs-widget-mobile.css">
+  <link rel="stylesheet" href="motion-demo.css">
+  <script src="cs-motion.js" defer></script>
+  <script src="cs-player-motion.js" defer></script>
+  <script src="cs-feed-motion.js" defer></script>
+  <script src="motion-extra.js" defer></script>
+  <script src="motion-demo.js" defer></script>
+</head>
+<body>
+  <main class="motion-lab">
+    <header class="motion-header">
+      <a href="index.html">← Стенд табло</a>
+      <span>CS2 · Motion</span>
+    </header>
+    <h1>Анимации элементов</h1>
+    <p class="motion-intro">Выберите элемент и запустите анимацию. Эффекты, тайминги и keyframes — из табло.</p>
+    <div class="motion-layout">
+      <aside class="motion-catalog">
+        <nav class="motion-nav" id="motion-nav" aria-label="Элементы и события"></nav>
+      </aside>
+      <section class="motion-workspace" aria-labelledby="motion-title">
+        <div class="motion-heading"><h2 id="motion-title">Баланс команды</h2><span id="motion-duration" class="motion-tag"></span></div>
+        <p id="motion-description"></p>
+        <div class="motion-trigger"><span>Триггер</span><p id="motion-trigger"></p></div>
+        <div class="motion-stage">
+          <div class="motion-preview cs-widget" data-head="m" id="motion-preview">
+            <div class="motion-effects-widget cs-widget" id="motion-effects" hidden><div class="motion-effects-score">NAVI <b>3 : 4</b> ENCE</div><div class="cs-chip cs-status"><img class="cs-status__icon" src="assets/status-bomb.svg" alt=""><p class="cs-chip-text">00:12</p></div><div class="cs-fx"></div></div>
+            <div id="motion-map" hidden><div class="cs-chip cs-mapscore cs-mapscore--live"><i class="cs-mapscore__live"></i><p class="cs-chip-text">Anubis 3 | 4</p></div></div>
+            <div class="motion-rosters-widget cs-widget" id="motion-rosters" hidden><div class="motion-effects-score">NAVI <b>3 : 4</b> ENCE</div><div class="cs-rosters"><div class="motion-roster-placeholder">Состав CT</div><div class="motion-media-placeholder">Видео</div><div class="motion-roster-placeholder">Состав T</div></div><p class="motion-history-placeholder">История раундов</p></div>
+            <div id="motion-feed-sequence" class="motion-player-widget cs-widget" hidden><p>Десктоп · до 4 сообщений</p><div class="cs-killfeed-list" id="motion-feed-desktop"></div><p>Мобильный · только последнее</p><div class="cs-killfeed-list" id="motion-feed-mobile"></div></div>
+            <div class="cs-shell motion-feed-host" id="motion-feed-host" hidden><div class="cs-widget motion-player-widget"><div class="cs-killfeed-list" id="motion-feed"></div></div></div>
+            <div class="cs-shell motion-player-host" id="motion-player-host" hidden><div class="cs-widget motion-player-widget"><div class="cs-player cs-player--left" id="motion-player"></div></div></div>
+            <button type="button" class="cs-collapse" id="motion-collapse" aria-expanded="true" aria-label="Свернуть виджет" hidden><span class="cs-collapse__icon"></span></button>
+            <div class="cs-round cs-round--ongoing" id="motion-round" hidden><p class="cs-round__number">8</p></div>
+            <div class="cs-chip cs-money cs-money--ct" id="motion-balance">
+              <img class="cs-money__icon" src="assets/dollar.svg" alt="">
+              <p class="cs-chip-text">24.3K</p>
+            </div>
+            <div class="cs-score" id="motion-score" hidden>
+              <div class="cs-score__box"><p class="cs-score__value" id="motion-score-value">3</p></div>
+              <p class="cs-score__colon">:</p>
+              <div class="cs-score__box"><p class="cs-score__value">4</p></div>
+            </div>
+          </div>
+          <p class="motion-stage-status" id="motion-status" aria-live="polite">Готово к запуску</p>
+        </div>
+        <div class="motion-controls">
+          <button class="motion-play motion-icon" type="button" id="motion-play" aria-label="Проиграть" title="Проиграть"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z" fill="currentColor"/></svg></button>
+          <button class="motion-icon" type="button" id="motion-reset" aria-label="Сбросить" title="Сбросить"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <label class="motion-checkbox"><input type="checkbox" id="motion-reduced"> Без движения</label>
+        </div>
+        <section class="motion-spec" aria-labelledby="motion-spec-title">
+          <h3 id="motion-spec-title">Тайминги и keyframes</h3>
+          <p id="motion-geometry" class="motion-hint"></p>
+          <div class="motion-phases" id="motion-phases"></div>
+        </section>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
+
